@@ -1,0 +1,197 @@
+---
+import AdminLayout from '../layouts/AdminLayout.astro';
+import { supabase } from '../lib/supabase';
+
+export const prerender = false;
+
+// Jam operasional lab: 07.00 - 18.00
+const MULAI = 7 * 60;
+const SELESAI = 18 * 60;
+const RENTANG = SELESAI - MULAI;
+const MAKS_HARI = 62;
+const TINGGI_BARIS = 40;
+const HARI = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+
+// --- Helper ---
+const toDate = (s: string) => new Date(`${s}T00:00:00Z`);
+const tambah = (s: string, n: number) => {
+  const d = toDate(s);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+const selisih = (a: string, b: string) => Math.round((toDate(b).getTime() - toDate(a).getTime()) / 86400000);
+const validIso = (s: string | null): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(toDate(s).getTime());
+const idxHari = (s: string) => (toDate(s).getUTCDay() + 6) % 7; // Senin = 0
+const tglPendek = (s: string) => toDate(s).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const toMenit = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+};
+const jam = (t: string) => t.slice(0, 5);
+const persen = (menit: number) => ((menit - MULAI) / RENTANG) * 100;
+
+// --- Rentang tanggal (default 7 hari terakhir, WIB) ---
+const hariIni = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+const p = Astro.url.searchParams;
+let sampai = validIso(p.get('sampai')) ? p.get('sampai')! : hariIni;
+let dari = validIso(p.get('dari')) ? p.get('dari')! : tambah(sampai, -6);
+if (dari > sampai) [dari, sampai] = [sampai, dari];
+let dipotong = false;
+if (selisih(dari, sampai) + 1 > MAKS_HARI) {
+  dari = tambah(sampai, -(MAKS_HARI - 1));
+  dipotong = true;
+}
+const jumlahHari = selisih(dari, sampai) + 1;
+
+const awalBulan = hariIni.slice(0, 8) + '01';
+const preset = [
+  { label: '7 hari terakhir', dari: tambah(hariIni, -6), sampai: hariIni },
+  { label: 'Bulan ini', dari: awalBulan, sampai: hariIni },
+];
+
+// --- Data ---
+const { data, error } = await supabase
+  .from('logbooks')
+  .select('id, nama_mahasiswa, nim, program_studi, keperluan, tanggal_pakai, waktu_mulai, waktu_selesai, volume_gram')
+  .gte('tanggal_pakai', dari)
+  .lte('tanggal_pakai', sampai)
+  .order('waktu_mulai', { ascending: true })
+  .limit(2000);
+const rows: any[] = data ?? [];
+
+const perTanggal = new Map<string, any[]>();
+for (const r of rows) {
+  const list = perTanggal.get(r.tanggal_pakai) ?? [];
+  list.push(r);
+  perTanggal.set(r.tanggal_pakai, list);
+}
+
+// Satu baris per tanggal. Jika ada jam yang bertumpuk, blok dipindah ke lajur bawah.
+const baris = Array.from({ length: jumlahHari }, (_, i) => {
+  const t = tambah(dari, i);
+  const akhirLajur: number[] = [];
+  const blok = (perTanggal.get(t) ?? []).map((r) => {
+    const mulai = toMenit(r.waktu_mulai);
+    const selesai = toMenit(r.waktu_selesai);
+    let lajur = akhirLajur.findIndex((a) => a <= mulai);
+    if (lajur === -1) {
+      lajur = akhirLajur.length;
+      akhirLajur.push(0);
+    }
+    akhirLajur[lajur] = selesai;
+    const a = Math.max(mulai, MULAI);
+    const b = Math.min(selesai, SELESAI);
+    return {
+      ...r,
+      lajur,
+      kiri: Math.min(persen(a), 99),
+      lebar: Math.max(((b - a) / RENTANG) * 100, 1),
+    };
+  });
+  return { t, idx: idxHari(t), blok, lajur: Math.max(akhirLajur.length, 1) };
+});
+
+const jamGrid = Array.from({ length: 12 }, (_, i) => 7 + i);
+const garisJam = `background-image:linear-gradient(to right,#e2e8f0 1px,transparent 1px);background-size:calc(100% / ${jamGrid.length - 1}) 100%`;
+const inputClass =
+  'block rounded-md border border-slate-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-700';
+---
+
+<AdminLayout title="Visualisasi Pemakaian">
+
+  <section class="bg-white p-6 rounded-lg border border-slate-200">
+    <form method="get" class="flex flex-wrap items-end gap-3">
+      <div>
+        <label for="dari" class="block text-sm font-medium text-slate-700 mb-1">Dari tanggal</label>
+        <input id="dari" type="date" name="dari" value={dari} class={inputClass} />
+      </div>
+      <div>
+        <label for="sampai" class="block text-sm font-medium text-slate-700 mb-1">Sampai tanggal</label>
+        <input id="sampai" type="date" name="sampai" value={sampai} class={inputClass} />
+      </div>
+      <button type="submit" class="bg-blue-900 text-white px-5 py-2 rounded-md hover:bg-blue-800 text-sm font-medium transition">
+        Tampilkan
+      </button>
+    </form>
+
+    <div class="flex flex-wrap gap-2 mt-4">
+      {preset.map((x) => (
+        <a
+          href={`?dari=${x.dari}&sampai=${x.sampai}`}
+          class={
+            'px-3 py-1.5 rounded-full text-sm border transition ' +
+            (x.dari === dari && x.sampai === sampai
+              ? 'bg-blue-900 text-white border-blue-900'
+              : 'border-slate-300 text-slate-700 hover:bg-slate-50')
+          }
+        >{x.label}</a>
+      ))}
+    </div>
+
+    {dipotong && (
+      <p class="text-xs text-orange-600 mt-3">Rentang dibatasi maksimal {MAKS_HARI} hari, jadi tanggal awal disesuaikan.</p>
+    )}
+  </section>
+
+  <section class="bg-white pt-6 rounded-lg border border-slate-200">
+    <div class="px-6 mb-4">
+      <h2 class="text-lg font-semibold text-blue-900">Pemakaian mesin per tanggal</h2>
+      <p class="text-sm text-slate-500 mt-1">
+        {tglPendek(dari)} – {tglPendek(sampai)} {toDate(sampai).getUTCFullYear()} · {rows.length} peminjaman.
+        Setiap blok menunjukkan jam mesin dipakai; arahkan kursor untuk melihat detail.
+      </p>
+      {error && (
+        <p class="mt-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">Gagal memuat data: {error.message}</p>
+      )}
+    </div>
+
+    <div class="overflow-x-auto">
+      <div class="min-w-[800px] px-6 pb-6">
+        <div class="grid" style="grid-template-columns:5.5rem 1fr">
+          <div></div>
+          <div class="relative h-6 text-xs text-slate-500">
+            {jamGrid.map((j, i) => (
+              <span class="absolute -translate-x-1/2" style={`left:${(i / (jamGrid.length - 1)) * 100}%`}>
+                {String(j).padStart(2, '0')}.00
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div class="border border-slate-200 rounded-md overflow-hidden">
+          {baris.map((b, n) => (
+            <div
+              class={`grid ${n > 0 ? 'border-t border-slate-100' : ''} ${b.idx >= 5 ? 'bg-slate-50' : 'bg-white'}`}
+              style="grid-template-columns:5.5rem 1fr"
+            >
+              <div class="px-3 py-2 leading-tight">
+                <p class={`text-xs ${b.t === hariIni ? 'text-orange-600 font-semibold' : 'text-slate-500'}`}>
+                  {b.t === hariIni ? 'Hari ini' : HARI[b.idx]}
+                </p>
+                <p class={`text-sm ${b.t === hariIni ? 'text-orange-600 font-semibold' : 'text-slate-800'}`}>{tglPendek(b.t)}</p>
+              </div>
+
+              <div class="relative border-l border-slate-200" style={`height:${b.lajur * TINGGI_BARIS + 8}px;${garisJam}`}>
+                {b.blok.map((k) => (
+                  <div
+                    class="absolute rounded bg-blue-900 text-white px-2 py-1 overflow-hidden text-xs leading-tight"
+                    style={`left:${k.kiri}%;width:${k.lebar}%;top:${4 + k.lajur * TINGGI_BARIS}px;height:${TINGGI_BARIS - 4}px`}
+                    title={`${k.nama_mahasiswa} (${k.nim})\n${jam(k.waktu_mulai)} – ${jam(k.waktu_selesai)}\n${k.program_studi ?? ''}\n${k.keperluan ?? ''}\n${k.volume_gram} g`}
+                  >
+                    <p class="font-semibold truncate">{k.nama_mahasiswa}</p>
+                    <p class="truncate text-blue-100">{jam(k.waktu_mulai)} – {jam(k.waktu_selesai)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {rows.length === 0 && !error && (
+          <p class="text-sm text-slate-500 pt-4">Tidak ada peminjaman pada rentang tanggal ini.</p>
+        )}
+      </div>
+    </div>
+  </section>
+
+</AdminLayout>

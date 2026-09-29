@@ -1,0 +1,387 @@
+---
+import AdminLayout from '../layouts/AdminLayout.astro';
+import { supabase } from '../lib/supabase';
+
+export const prerender = false;
+
+// ============================================================
+// KONFIGURASI KOP LAPORAN PDF — ubah sesuai kampus kamu
+// Logo: taruh file di  public/logo-kampus.png  (URL: /logo-kampus.png)
+// ============================================================
+const KOP = {
+  logo: '/logo-kampus.png',
+  kampus: 'POLITEKNIK MANUFAKTUR BANDUNG',
+  unit: 'Jurusan Teknik Otomasi Manufaktur dan Mekatronika',
+  alamat: 'Jalan Kanayakan No.21 Dago, Coblong, Kota Bandung, 40135',
+  judul: 'LAPORAN PEMAKAIAN MESIN 3D PRINTER',
+  penandatangan: 'Mas Rohmat',
+  jabatan: 'PLP Laboratorium',
+};
+
+// --- Ambil filter dari query string (?nim=...&dari=...&sampai=...) ---
+const params = Astro.url.searchParams;
+const nim = (params.get('nim') ?? '').trim();
+const dari = params.get('dari') ?? '';
+const sampai = params.get('sampai') ?? '';
+const adaFilter = Boolean(nim || dari || sampai);
+
+// --- Query ke Supabase ---
+let query = supabase
+  .from('logbooks')
+  .select(
+    'id, nama_mahasiswa, nim, program_studi, dosen_terkait, keperluan, tanggal_pakai, waktu_mulai, waktu_selesai, durasi_menit, volume_gram, printers(nama_mesin), filaments(jenis_warna)'
+  )
+  .order('tanggal_pakai', { ascending: false })
+  .order('waktu_mulai', { ascending: false })
+  .limit(500);
+
+if (nim) query = query.ilike('nim', `%${nim}%`);
+if (dari) query = query.gte('tanggal_pakai', dari);
+if (sampai) query = query.lte('tanggal_pakai', sampai);
+
+const { data, error } = await query;
+const rows: any[] = data ?? [];
+
+// --- Helper tampilan ---
+const formatTanggal = (iso: string) => {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
+const formatJam = (t: string) => (t ?? '').slice(0, 5);
+const formatDurasi = (menit: number) => {
+  const j = Math.floor(menit / 60);
+  const m = menit % 60;
+  if (j === 0) return `${m} mnt`;
+  return m === 0 ? `${j} jam` : `${j} jam ${m} mnt`;
+};
+
+const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const tanggalPanjang = (iso: string) => {
+  const [y, m, d] = iso.split('-');
+  return `${Number(d)} ${BULAN[Number(m) - 1]} ${y}`;
+};
+
+const totalGram = rows.reduce((sum, r) => sum + (r.volume_gram ?? 0), 0);
+const totalMenit = rows.reduce((sum, r) => sum + (r.durasi_menit ?? 0), 0);
+
+// --- Data untuk export PDF (periode = filter tanggal, atau rentang data jika tanpa filter) ---
+const tanggalData = rows.map((r) => r.tanggal_pakai).filter(Boolean).sort();
+const awal = dari || tanggalData[0] || '';
+const akhir = sampai || tanggalData[tanggalData.length - 1] || '';
+const periode = awal && akhir
+  ? awal === akhir
+    ? tanggalPanjang(awal)
+    : `${tanggalPanjang(awal)} s.d. ${tanggalPanjang(akhir)}`
+  : '-';
+
+const laporan = {
+  kop: KOP,
+  periode,
+  awal,
+  akhir,
+  filterNim: nim,
+  ringkasan: {
+    jumlah: rows.length,
+    gram: totalGram,
+    durasi: formatDurasi(totalMenit),
+  },
+  rows: rows.map((r) => [
+    formatTanggal(r.tanggal_pakai),
+    r.nama_mahasiswa ?? '-',
+    r.nim ?? '-',
+    r.program_studi ?? '-',
+    r.keperluan ?? '-',
+    r.dosen_terkait ?? '-',
+    `${formatJam(r.waktu_mulai)} - ${formatJam(r.waktu_selesai)}`,
+    formatDurasi(r.durasi_menit ?? 0),
+    `${r.volume_gram ?? 0} g${r.filaments?.jenis_warna ? ` (${r.filaments.jenis_warna})` : ''}`,
+  ]),
+};
+// Escape "<" supaya aman ditaruh di dalam <script>
+const laporanJson = JSON.stringify(laporan).replace(/</g, '\\u003c');
+
+const inputClass =
+  'mt-1 block w-full rounded-md border border-slate-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-700';
+---
+
+<AdminLayout title="Riwayat Pemakaian">
+
+  <section class="bg-white p-6 rounded-lg border border-slate-200 mb-6">
+    <h2 class="text-lg font-semibold text-blue-900">Cari riwayat</h2>
+    <p class="text-sm text-slate-500 mt-1 mb-5">
+      Filter berdasarkan NIM mahasiswa atau rentang tanggal pemakaian.
+    </p>
+
+    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="nim">NIM</label>
+        <input id="nim" type="text" name="nim" value={nim} class={inputClass} placeholder="2224402402" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="dari">Dari tanggal</label>
+        <input id="dari" type="date" name="dari" value={dari} class={inputClass} />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="sampai">Sampai tanggal</label>
+        <input id="sampai" type="date" name="sampai" value={sampai} class={inputClass} />
+      </div>
+
+      <div class="flex gap-3">
+        <button type="submit" class="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-800 text-sm font-medium transition">
+          Terapkan filter
+        </button>
+        {adaFilter && (
+          <a href="/riwayat_pemakaian" class="px-5 py-2 rounded-md border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            Reset
+          </a>
+        )}
+      </div>
+    </form>
+  </section>
+
+  <section class="bg-white rounded-lg border border-slate-200">
+    <div class="flex flex-wrap items-start justify-between gap-3 p-6 pb-4">
+      <div>
+        <h2 class="text-lg font-semibold text-blue-900">Riwayat pemakaian</h2>
+        <p class="text-sm text-slate-500 mt-1">
+          {rows.length} peminjaman
+          {adaFilter ? ' sesuai filter' : ' tercatat'}
+          · {totalGram} g filamen · {formatDurasi(totalMenit)} pemakaian mesin
+        </p>
+      </div>
+
+      <button
+        id="btn-export-pdf"
+        type="button"
+        disabled={rows.length === 0}
+        class="inline-flex items-center gap-2 rounded-md bg-orange-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        <span id="btn-export-label">Export PDF</span>
+      </button>
+    </div>
+
+    {error && (
+      <p class="mx-6 mb-6 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+        Gagal memuat data: {error.message}
+      </p>
+    )}
+
+    {!error && rows.length === 0 ? (
+      <p class="px-6 pb-8 text-sm text-slate-500">
+        {adaFilter
+          ? 'Tidak ada data yang cocok. Ubah atau reset filter untuk melihat semua riwayat.'
+          : 'Belum ada peminjaman. Catat peminjaman pertama lewat menu Input Logbook.'}
+      </p>
+    ) : (
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 text-slate-600 border-y border-slate-200">
+            <tr>
+              <th class="px-4 py-3 font-medium whitespace-nowrap">Tanggal</th>
+              <th class="px-4 py-3 font-medium">Mahasiswa</th>
+              <th class="px-4 py-3 font-medium">Program studi</th>
+              <th class="px-4 py-3 font-medium">Keperluan</th>
+              <th class="px-4 py-3 font-medium">Dosen</th>
+              <th class="px-4 py-3 font-medium whitespace-nowrap">Waktu</th>
+              <th class="px-4 py-3 font-medium whitespace-nowrap">Durasi</th>
+              <th class="px-4 py-3 font-medium whitespace-nowrap text-right">Filamen</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {rows.map((r) => (
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 whitespace-nowrap">{formatTanggal(r.tanggal_pakai)}</td>
+                <td class="px-4 py-3">
+                  <div class="font-medium text-slate-900">{r.nama_mahasiswa}</div>
+                  <div class="text-xs text-slate-500">{r.nim}</div>
+                </td>
+                <td class="px-4 py-3">{r.program_studi ?? '-'}</td>
+                <td class="px-4 py-3">{r.keperluan ?? '-'}</td>
+                <td class="px-4 py-3">{r.dosen_terkait ?? '-'}</td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  {formatJam(r.waktu_mulai)} – {formatJam(r.waktu_selesai)}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">{formatDurasi(r.durasi_menit ?? 0)}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-right">
+                  <div class="font-medium">{r.volume_gram} g</div>
+                  <div class="text-xs text-slate-500">{r.filaments?.jenis_warna ?? ''}</div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+
+    {rows.length === 500 && (
+      <p class="px-6 py-4 text-xs text-slate-500 border-t border-slate-100">
+        Menampilkan 500 data terbaru. Persempit filter untuk melihat data lainnya.
+      </p>
+    )}
+  </section>
+
+  <script id="data-laporan" type="application/json" is:inline set:html={laporanJson} />
+
+</AdminLayout>
+
+<script>
+  type Logo = { dataUrl: string; fmt: 'PNG' | 'JPEG'; w: number; h: number };
+
+  // Ambil logo dari /public lalu ubah ke base64 (gagal = PDF tetap jadi tanpa logo)
+  async function muatLogo(url: string): Promise<Logo | null> {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string>((ok, gagal) => {
+        const fr = new FileReader();
+        fr.onload = () => ok(fr.result as string);
+        fr.onerror = gagal;
+        fr.readAsDataURL(blob);
+      });
+      const dim = await new Promise<{ w: number; h: number }>((ok, gagal) => {
+        const img = new Image();
+        img.onload = () => ok({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = gagal;
+        img.src = dataUrl;
+      });
+      return { dataUrl, fmt: blob.type.includes('jpeg') ? 'JPEG' : 'PNG', ...dim };
+    } catch {
+      return null;
+    }
+  }
+
+  async function exportPdf() {
+    const laporan = JSON.parse(document.getElementById('data-laporan')!.textContent || '{}');
+    const { kop, ringkasan } = laporan;
+
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
+    const logo = await muatLogo(kop.logo);
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const M = 14;
+
+    // ---------- KOP SURAT ----------
+    if (logo) {
+      const tinggi = 24;
+      const lebar = Math.min(34, (logo.w / logo.h) * tinggi);
+      doc.addImage(logo.dataUrl, logo.fmt, M, 9, lebar, tinggi);
+    }
+    doc.setTextColor(30, 58, 138);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text(kop.kampus, pageW / 2, 16, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(kop.unit, pageW / 2, 22.5, { align: 'center' });
+    doc.setTextColor(80);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(kop.alamat, pageW / 2, 28, { align: 'center' });
+    doc.setDrawColor(30, 58, 138);
+    doc.setLineWidth(0.8);
+    doc.line(M, 36, pageW - M, 36);
+    doc.setLineWidth(0.2);
+    doc.line(M, 37.2, pageW - M, 37.2);
+
+    // ---------- JUDUL & PERIODE ----------
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text(kop.judul, pageW / 2, 46, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Periode: ${laporan.periode}`, pageW / 2, 52, { align: 'center' });
+    if (laporan.filterNim) {
+      doc.text(`Filter NIM: ${laporan.filterNim}`, pageW / 2, 57, { align: 'center' });
+    }
+
+    const yRingkasan = laporan.filterNim ? 65 : 61;
+    doc.setFontSize(10);
+    doc.text(
+      `Total peminjaman: ${ringkasan.jumlah}    |    Total filamen terpakai: ${ringkasan.gram} g    |    Total pemakaian mesin: ${ringkasan.durasi}`,
+      M,
+      yRingkasan
+    );
+
+    // ---------- TABEL ----------
+    autoTable(doc, {
+      startY: yRingkasan + 4,
+      head: [['No', 'Tanggal', 'Mahasiswa', 'NIM', 'Program Studi', 'Keperluan', 'Dosen', 'Waktu', 'Durasi', 'Filamen']],
+      body: laporan.rows.map((r: string[], i: number) => [i + 1, ...r]),
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 1.8, lineColor: [203, 213, 225], lineWidth: 0.1, valign: 'middle' },
+      headStyles: { fillColor: [30, 58, 138], textColor: 255, halign: 'center' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        1: { cellWidth: 22 },
+        3: { cellWidth: 26 },
+        7: { cellWidth: 26 },
+        8: { cellWidth: 20 },
+        9: { cellWidth: 28, halign: 'right' },
+      },
+      margin: { left: M, right: M, bottom: 16 },
+    });
+
+    // ---------- TANDA TANGAN ----------
+    let y = (doc as any).lastAutoTable.finalY + 10;
+    if (y + 38 > pageH - 16) {
+      doc.addPage();
+      y = 20;
+    }
+    const tglCetak = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const xTtd = pageW - M - 60;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Dicetak: ${tglCetak}`, xTtd, y);
+    doc.text('Mengetahui,', xTtd, y + 6);
+    doc.text(kop.jabatan, xTtd, y + 11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(kop.penandatangan, xTtd, y + 32);
+    doc.setLineWidth(0.2);
+    doc.setDrawColor(0);
+    doc.line(xTtd, y + 33, xTtd + doc.getTextWidth(kop.penandatangan), y + 33);
+
+    // ---------- NOMOR HALAMAN ----------
+    const total = doc.getNumberOfPages();
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(120);
+      doc.text(`Halaman ${i} dari ${total}`, pageW - M, pageH - 8, { align: 'right' });
+      doc.text(kop.judul, M, pageH - 8);
+    }
+
+    const nama = `laporan-pemakaian-3d-printer_${laporan.awal || 'semua'}_${laporan.akhir || 'data'}.pdf`;
+    doc.save(nama);
+  }
+
+  const btn = document.getElementById('btn-export-pdf') as HTMLButtonElement | null;
+  const label = document.getElementById('btn-export-label');
+  btn?.addEventListener('click', async () => {
+    btn.disabled = true;
+    if (label) label.textContent = 'Membuat PDF...';
+    try {
+      await exportPdf();
+    } catch (e) {
+      console.error(e);
+      alert('Gagal membuat PDF. Cek console untuk detailnya.');
+    } finally {
+      btn.disabled = false;
+      if (label) label.textContent = 'Export PDF';
+    }
+  });
+</script>

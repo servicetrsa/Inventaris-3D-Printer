@@ -1,0 +1,301 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  subtitle?: string;
+}
+
+const { title = 'Dashboard', subtitle } = Astro.props;
+const path = Astro.url.pathname;
+
+// Ikon: path SVG (Heroicons outline, 24x24)
+const menu = [
+  {
+    href: '/',
+    label: 'Dashboard',
+    icon: 'M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z',
+  },
+  {
+    href: '/logbook',
+    label: 'Input Logbook',
+    icon: 'm16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10',
+  },
+  {
+    href: '/riwayat_pemakaian',
+    label: 'Riwayat Pemakaian',
+    icon: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  },
+  {
+    href: '/visualisasi_pemakaian',
+    label: 'Visualisasi Pemakaian',
+    icon: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z',
+  },
+  {
+    href: '/restock_filament',
+    label: 'Restock Filament',
+    icon: 'm20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z',
+  },
+];
+
+const aktif = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+
+const ICON_TOGGLE = 'M3.75 6A2.25 2.25 0 0 1 6 3.75h12A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V6ZM9 3.75v16.5';
+const ICON_LOGOUT = 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9';
+---
+
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/logo-kampus.png" />
+    <title>{title} - Inventaris 3D Printer</title>
+
+    <!-- Terapkan state sidebar sebelum render, supaya tidak berkedip -->
+    <script is:inline>
+      try {
+        if (localStorage.getItem('sb') === 'collapsed') {
+          document.documentElement.dataset.sb = 'collapsed';
+        }
+      } catch (e) {}
+    </script>
+
+    <style is:global>
+      [x-cloak] { display: none !important; }
+
+      :root { --sb-w: 16rem; }
+
+      /* Mode collapse hanya berlaku di desktop; di mobile sidebar selalu penuh (drawer) */
+      @media (min-width: 1024px) {
+        :root[data-sb='collapsed'] { --sb-w: 4.75rem; }
+        :root[data-sb='collapsed'] .sb-label { display: none; }
+        :root[data-sb='collapsed'] .sb-item { justify-content: center; padding-left: 0; padding-right: 0; }
+        :root[data-sb='collapsed'] .sb-brand { justify-content: center; padding-left: 0; padding-right: 0; }
+        :root[data-sb='collapsed'] .sb-tip { display: block; }
+      }
+
+      .sb-tip { display: none; }
+      .sb-item:hover .sb-tip,
+      .sb-item:focus-visible .sb-tip { opacity: 1; transform: translateX(0); }
+
+      @media (prefers-reduced-motion: reduce) {
+        * { transition-duration: 0.01ms !important; }
+      }
+    </style>
+  </head>
+
+  <body class="bg-slate-100 text-slate-900 font-sans antialiased">
+    <div class="min-h-screen">
+      <!-- Overlay (mobile) -->
+      <div id="sb-overlay" class="hidden fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-sm lg:hidden"></div>
+
+      <!-- Sidebar -->
+      <aside
+        id="sidebar"
+        class="-translate-x-full fixed inset-y-0 left-0 z-40 w-64 lg:w-(--sb-w) lg:translate-x-0 bg-linear-to-b from-blue-900 to-[#172554] text-white flex flex-col shadow-xl lg:shadow-none transition-[transform,width] duration-200 ease-out"
+        aria-label="Navigasi utama"
+      >
+        <!-- Brand -->
+        <a href="/" class="sb-brand group flex items-center gap-3 px-4 h-16 shrink-0 border-b border-white/10">
+          <span class="grid place-items-center w-10 h-10 shrink-0 rounded-full bg-white p-1.5 ring-4 ring-white/10 transition group-hover:ring-white/20 group-hover:scale-105">
+            <img src="/logo-kampus.png" alt="Logo kampus" class="max-h-full max-w-full object-contain" />
+          </span>
+          <span class="sb-label min-w-0 font-bold text-lg leading-[1.15] tracking-tight">
+            Inventaris<br />3D Printer
+          </span>
+        </a>
+
+        <!-- Menu -->
+        <nav class="flex-1 px-3 py-4 space-y-1">
+          {menu.map((item) => {
+            const on = aktif(item.href);
+            return (
+              <a
+                href={item.href}
+                aria-current={on ? 'page' : undefined}
+                class={
+                  'sb-item group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ' +
+                  (on ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10 hover:text-white')
+                }
+              >
+                {on && <span class="absolute -left-3 top-2 bottom-2 w-1 rounded-r-full bg-orange-500" />}
+                <svg
+                  class={'size-5 shrink-0 transition-transform group-hover:scale-110 ' + (on ? 'text-blue-900' : 'text-blue-200 group-hover:text-white')}
+                  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d={item.icon} />
+                </svg>
+                <span class="sb-label truncate">{item.label}</span>
+
+                <!-- Tooltip saat sidebar diciutkan -->
+                <span class="sb-tip pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 -translate-x-1 opacity-0 transition duration-150 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1 text-xs font-medium text-white shadow-lg">
+                  {item.label}
+                </span>
+              </a>
+            );
+          })}
+        </nav>
+
+        <!-- Logout -->
+        <div class="p-3 border-t border-white/10">
+          <button
+            id="btn-logout-open"
+            type="button"
+            class="sb-item group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-100 hover:bg-red-600 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+          >
+            <svg class="size-5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d={ICON_LOGOUT} />
+            </svg>
+            <span class="sb-label">Logout</span>
+            <span class="sb-tip pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 -translate-x-1 opacity-0 transition duration-150 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1 text-xs font-medium text-white shadow-lg">
+              Logout
+            </span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Konten -->
+      <div class="lg:pl-(--sb-w) transition-[padding] duration-200 ease-out min-h-screen flex flex-col">
+        <header class="sticky top-0 z-20 h-16 bg-white/85 backdrop-blur border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <button
+              id="sb-toggle"
+              type="button"
+              aria-expanded="true"
+              aria-controls="sidebar"
+              aria-label="Tampilkan atau sembunyikan sidebar"
+              title="Sidebar (Ctrl+B)"
+              class="grid place-items-center size-10 shrink-0 rounded-lg text-blue-900 hover:bg-blue-50 active:scale-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <svg class="size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d={ICON_TOGGLE} />
+              </svg>
+            </button>
+            <div class="min-w-0">
+              <h1 class="text-lg sm:text-xl font-bold text-blue-900 leading-tight truncate">{title}</h1>
+              {subtitle
+                ? <p class="hidden sm:block text-xs text-slate-500 truncate">{subtitle}</p>
+                : <p id="today" class="hidden sm:block text-xs text-slate-500"></p>}
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="hidden sm:inline text-sm font-medium bg-blue-50 text-blue-900 pl-1 pr-3 py-1 rounded-full">
+              <span class="inline-grid place-items-center size-6 mr-1.5 rounded-full bg-blue-900 text-white text-[10px] font-bold">PL</span>
+              Admin (PLP)
+            </span>
+            <span class="sm:hidden grid place-items-center size-9 rounded-full bg-blue-900 text-white text-xs font-bold" title="Admin (PLP)">PL</span>
+          </div>
+        </header>
+
+        <main class="flex-1 p-4 sm:p-6 w-full max-w-7xl mx-auto space-y-6">
+          <slot />
+        </main>
+      </div>
+
+      <!-- Modal konfirmasi logout -->
+      <div
+        id="logout-modal"
+        class="fixed inset-0 z-50 hidden place-items-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-title"
+      >
+        <div
+          data-close-modal
+          class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+        ></div>
+        <div
+          class="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+        >
+          <h2 id="logout-title" class="text-lg font-bold text-slate-900">Keluar dari akun?</h2>
+          <p class="mt-1 text-sm text-slate-500">Kamu perlu login lagi untuk membuka data inventaris.</p>
+          <div class="mt-6 flex justify-end gap-2">
+            <button
+              type="button"
+              data-close-modal
+              class="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition"
+            >Batal</button>
+            <button
+              id="btn-logout"
+              type="button"
+              class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 transition disabled:opacity-60"
+            >Logout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      import { createSupabaseBrowser } from '../lib/supabase-auth';
+
+      // ---------- Sidebar & modal ----------
+      const root = document.documentElement;
+      const sidebar = document.getElementById('sidebar') as HTMLElement;
+      const overlay = document.getElementById('sb-overlay') as HTMLElement;
+      const toggleBtn = document.getElementById('sb-toggle') as HTMLElement;
+      const modal = document.getElementById('logout-modal') as HTMLElement;
+      const isDesktop = () => window.innerWidth >= 1024;
+
+      const today = document.getElementById('today');
+      if (today) {
+        today.textContent = new Date().toLocaleDateString('id-ID', {
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+        });
+      }
+
+      function setDrawer(open: boolean) {
+        sidebar.classList.toggle('-translate-x-full', !open);
+        overlay.classList.toggle('hidden', !open);
+        document.body.classList.toggle('overflow-hidden', open);
+        if (!isDesktop()) toggleBtn.setAttribute('aria-expanded', String(open));
+      }
+
+      function setCollapsed(collapsed: boolean) {
+        if (collapsed) root.dataset.sb = 'collapsed';
+        else delete root.dataset.sb;
+        try { localStorage.setItem('sb', collapsed ? 'collapsed' : 'open'); } catch {}
+        toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+      }
+
+      function toggleSidebar() {
+        if (isDesktop()) setCollapsed(root.dataset.sb !== 'collapsed');
+        else setDrawer(sidebar.classList.contains('-translate-x-full'));
+      }
+
+      function setModal(open: boolean) {
+        modal.classList.toggle('hidden', open);
+        modal.classList.toggle('grid', open);
+        document.body.classList.toggle('overflow-hidden', open);
+      }
+
+      if (isDesktop()) toggleBtn.setAttribute('aria-expanded', String(root.dataset.sb !== 'collapsed'));
+      else toggleBtn.setAttribute('aria-expanded', 'false');
+
+      toggleBtn.addEventListener('click', toggleSidebar);
+      overlay.addEventListener('click', () => setDrawer(false));
+      sidebar.querySelectorAll('nav a').forEach((a) => a.addEventListener('click', () => setDrawer(false)));
+
+      document.getElementById('btn-logout-open')?.addEventListener('click', () => setModal(true));
+      modal.querySelectorAll('[data-close-modal]').forEach((el) => el.addEventListener('click', () => setModal(false)));
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { setDrawer(false); setModal(false); }
+        if (e.ctrlKey && e.key.toLowerCase() === 'b') { e.preventDefault(); toggleSidebar(); }
+      });
+      window.addEventListener('resize', () => { if (isDesktop()) setDrawer(false); });
+
+      // ---------- Logout ----------
+
+      const supabase = createSupabaseBrowser();
+      const btnLogout = document.getElementById('btn-logout') as HTMLButtonElement | null;
+
+      btnLogout?.addEventListener('click', async () => {
+        btnLogout.disabled = true;
+        btnLogout.textContent = 'Keluar...';
+        await supabase.auth.signOut();
+        window.location.href = '/login';
+      });
+    </script>
+  </body>
+</html>
