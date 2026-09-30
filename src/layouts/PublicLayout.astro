@@ -37,11 +37,11 @@ const year = new Date().getFullYear();
   </head>
 
   <body
-    class="min-h-dvh bg-[#f4f6fb] text-slate-900 antialiased selection:bg-orange-200 selection:text-slate-900 print:bg-white"
+    class="min-h-dvh bg-[#f4f6fb] text-slate-900 antialiased selection:bg-blue-200 selection:text-slate-900 print:bg-white"
   >
     <a
       href="#konten"
-      class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-blue-900 focus:shadow-lg focus:ring-2 focus:ring-orange-500"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-blue-900 focus:shadow-lg focus:ring-2 focus:ring-[#14286b]"
     >
       Langsung ke konten
     </a>
@@ -53,7 +53,7 @@ const year = new Date().getFullYear();
       <div class="mx-auto flex max-w-3xl items-center gap-3.5 px-4 py-3 sm:px-6">
         <a
           href="/"
-          class="group -mx-2 flex items-center gap-3.5 rounded-xl px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+          class="group -mx-2 flex items-center gap-3.5 rounded-xl px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           <span class="grid size-11 shrink-0 place-items-center rounded-lg bg-white p-1.5">
             <img
@@ -73,7 +73,7 @@ const year = new Date().getFullYear();
       </div>
 
       <!-- Garis aksen tipis (hapus baris ini kalau tidak mau ada garis sama sekali) -->
-      <div aria-hidden="true" class="h-0.5 w-full bg-orange-500"></div>
+      <div aria-hidden="true" class="h-0.5 w-full bg-[var(--accent)]"></div>
     </header>
 
     <main id="konten" class="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12 print:max-w-none print:p-0">
@@ -90,6 +90,8 @@ const year = new Date().getFullYear();
 
 <style is:global>
   :root {
+    --brand: #14286b;
+    --accent: #fbbf24; /* warna garis header, ganti di sini */
     --bed-line: rgb(20 40 107 / 0.06);
   }
 
@@ -106,9 +108,16 @@ const year = new Date().getFullYear();
     mask-image: linear-gradient(to bottom, black, transparent 85%);
   }
 
-  :focus-visible {
-    outline: 2px solid #f97316;
+  /* Fokus: satu warna biru untuk semua elemen interaktif */
+  :where(a, button, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--brand);
     outline-offset: 2px;
+  }
+
+  :where(input, textarea, select):focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgb(20 40 107 / 0.25);
   }
 
   @media print {
