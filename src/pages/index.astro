@@ -8,6 +8,10 @@ const label = 'block text-sm font-medium text-slate-700';
 const card = 'rounded-xl border border-slate-200 bg-white p-4 sm:p-6';
 const kolom =
   'sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem]';
+
+// Pilihan jam (07-18) dan menit (kelipatan 5) untuk pemilih waktu
+const JAM = Array.from({ length: 12 }, (_, i) => String(i + 7).padStart(2, '0'));
+const MENIT = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
 ---
 
 <PublicLayout>
@@ -83,26 +87,33 @@ const kolom =
     <!-- 3. Jadwal -->
     <section class={card}>
       <h2 class="font-semibold text-slate-900">3. Jadwal pemakaian</h2>
-      <p class="mt-1 text-sm text-slate-500">
+      <p class="mt-2 text-sm leading-relaxed text-slate-500">
         Isi rencana pemakaian. Baris kosong dan kolom paraf pada surat diisi tangan setelah alat digunakan.
       </p>
 
-      <div class={'mt-4 mb-1 hidden gap-2 text-xs font-medium text-slate-500 sm:grid ' + kolom}>
+      <div class={'mt-5 mb-2 hidden gap-2 text-xs font-medium text-slate-500 sm:grid ' + kolom}>
         <span>Tanggal</span><span>Waktu mulai</span><span>Waktu selesai</span><span>Volume (gram)</span><span></span>
       </div>
-      <div id="rows" class="space-y-3 sm:space-y-2"></div>
+      <div id="rows" class="mt-5 space-y-4 sm:mt-0 sm:space-y-2"></div>
 
-      <button
-        type="button"
-        id="btn-add-row"
-        class="mt-3 inline-flex h-9 items-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-blue-900 transition hover:bg-blue-50 disabled:opacity-50"
-      >+ Tambah jadwal</button>
-      <span class="ml-2 text-xs text-slate-400">maksimal {MAKS_BARIS} baris</span>
+      <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <button
+          type="button"
+          id="btn-add-row"
+          class="inline-flex h-9 items-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-blue-900 transition hover:bg-blue-50 disabled:opacity-50"
+        >+ Tambah jadwal</button>
+        <span class="text-xs text-slate-400">maksimal {MAKS_BARIS} baris</span>
+      </div>
     </section>
 
     <div id="err" role="alert" class="hidden rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"></div>
-    <div id="ok" class="hidden rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-      Surat berhasil dibuat dan diunduh. Cetak, minta tanda tangan, lalu serahkan ke admin laboratorium.
+    <div id="ok" class="hidden rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm leading-relaxed text-emerald-800">
+      <p class="font-semibold">Surat berhasil dibuat.</p>
+      <p class="mt-1">
+        File PDF tersimpan di perangkatmu. Jika kamu membuka lewat browser HP, cek menu
+        <strong>Download / Unduhan</strong> (ikon titik tiga <strong>⋮</strong> di pojok browser) atau folder Download di HP.
+      </p>
+      <p class="mt-1">Setelah itu, cetak, minta tanda tangan, lalu serahkan ke Pranata Laboratorium Pendidikan.</p>
     </div>
 
     <button
@@ -114,29 +125,57 @@ const kolom =
 
   <!-- Template baris jadwal -->
   <template id="row-tpl">
-    <div data-row class={'grid grid-cols-2 gap-2 sm:items-center ' + kolom}>
-      <label class="block">
+    <div data-row class={'grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:items-center sm:gap-2 sm:border-0 sm:bg-transparent sm:p-0 ' + kolom}>
+      <p data-no class="col-span-2 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:hidden"></p>
+
+      <label class="col-span-2 block sm:col-span-1">
         <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Tanggal</span>
         <input type="date" data-f="tanggal" required aria-label="Tanggal" class={field} />
       </label>
-      <label class="block">
+
+      <div data-time>
         <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Waktu mulai</span>
-        <input type="time" data-f="mulai" required aria-label="Waktu mulai" class={field} />
-      </label>
-      <label class="block">
+        <div class="flex items-center gap-1">
+          <select data-h required aria-label="Jam mulai" class={field}>
+            <option value="">Jam</option>
+            {JAM.map((j) => <option value={j}>{j}</option>)}
+          </select>
+          <span class="text-slate-400">:</span>
+          <select data-m required aria-label="Menit mulai" class={field}>
+            <option value="">Mnt</option>
+            {MENIT.map((m) => <option value={m}>{m}</option>)}
+          </select>
+        </div>
+        <input type="hidden" data-f="mulai" />
+      </div>
+
+      <div data-time>
         <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Waktu selesai</span>
-        <input type="time" data-f="selesai" required aria-label="Waktu selesai" class={field} />
-      </label>
-      <label class="block">
+        <div class="flex items-center gap-1">
+          <select data-h required aria-label="Jam selesai" class={field}>
+            <option value="">Jam</option>
+            {JAM.map((j) => <option value={j}>{j}</option>)}
+          </select>
+          <span class="text-slate-400">:</span>
+          <select data-m required aria-label="Menit selesai" class={field}>
+            <option value="">Mnt</option>
+            {MENIT.map((m) => <option value={m}>{m}</option>)}
+          </select>
+        </div>
+        <input type="hidden" data-f="selesai" />
+      </div>
+
+      <label class="col-span-2 block sm:col-span-1">
         <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Volume (gram)</span>
         <input type="number" data-f="volume" required min="1" step="1" inputmode="numeric" placeholder="gram" aria-label="Volume (gram)" class={field} />
       </label>
+
       <button
         type="button"
         data-remove
         aria-label="Hapus baris"
         class="col-span-2 h-10 rounded-lg text-sm text-slate-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 sm:col-span-1"
-      >&times;</button>
+      >&times;<span class="ml-1 sm:hidden">Hapus jadwal ini</span></button>
     </div>
   </template>
 </PublicLayout>
@@ -177,6 +216,7 @@ const kolom =
   function refreshRows() {
     const n = rowsEl.children.length;
     rowsEl.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach((b) => (b.disabled = n <= 1));
+    rowsEl.querySelectorAll<HTMLElement>('[data-no]').forEach((p, i) => (p.textContent = `Jadwal ${i + 1}`));
     btnAdd.disabled = n >= MAKS_BARIS;
   }
   function addRow() {
@@ -190,6 +230,14 @@ const kolom =
       b.closest('[data-row]')!.remove();
       refreshRows();
     }
+  });
+  // Gabungkan pilihan jam + menit menjadi satu nilai "HH:MM"
+  rowsEl.addEventListener('change', (e) => {
+    const box = (e.target as HTMLElement).closest('[data-time]');
+    if (!box) return;
+    const h = (box.querySelector('[data-h]') as HTMLSelectElement).value;
+    const m = (box.querySelector('[data-m]') as HTMLSelectElement).value;
+    (box.querySelector('input[type="hidden"]') as HTMLInputElement).value = h && m ? `${h}:${m}` : '';
   });
   btnAdd.addEventListener('click', addRow);
   addRow();
@@ -213,8 +261,9 @@ const kolom =
   function validasi(rows: Baris[]): string[] {
     const e: string[] = [];
     rows.forEach((r, i) => {
-      if (r.selesai <= r.mulai) e.push(`Jadwal baris ${i + 1}: waktu selesai harus setelah waktu mulai.`);
-      if (!(Number(r.volume) >= 1)) e.push(`Jadwal baris ${i + 1}: volume minimal 1 gram.`);
+      if (!r.mulai || !r.selesai) e.push(`Jadwal ${i + 1}: lengkapi jam dan menit untuk waktu mulai dan selesai.`);
+      else if (r.selesai <= r.mulai) e.push(`Jadwal ${i + 1}: waktu selesai harus setelah waktu mulai.`);
+      if (!(Number(r.volume) >= 1)) e.push(`Jadwal ${i + 1}: volume minimal 1 gram.`);
     });
     return e;
   }
@@ -469,6 +518,7 @@ const kolom =
       terapkanStatus();
 
       okEl.classList.remove('hidden');
+      okEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch (err) {
       console.error(err);
       tampilError(['Gagal membuat PDF. Muat ulang halaman lalu coba lagi.']);
