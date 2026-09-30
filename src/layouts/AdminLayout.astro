@@ -12,7 +12,7 @@ const path = Astro.url.pathname;
 // Ikon: path SVG (Heroicons outline, 24x24)
 const menu = [
   {
-    href: '/',
+    href: '/dashboard',
     label: 'Dashboard',
     icon: 'M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z',
   },
@@ -22,23 +22,17 @@ const menu = [
     icon: 'm16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10',
   },
   {
-    href: '/riwayat_pemakaian',
-    label: 'Riwayat Pemakaian',
-    icon: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
-  },
-  {
-    href: '/visualisasi_pemakaian',
-    label: 'Visualisasi Pemakaian',
+    label: 'Data & Laporan',
     icon: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z',
-  },
-  {
-    href: '/restock_filament',
-    label: 'Restock Filament',
-    icon: 'm20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z',
+    children: [
+      { href: '/riwayat_pemakaian', label: 'Riwayat Pemakaian' },
+      { href: '/visualisasi_pemakaian', label: 'Visualisasi Pemakaian' },
+      { href: '/restock_filament', label: 'Restock Filament' },
+    ],
   },
 ];
 
-const aktif = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+const aktif = (href: string) => path === href || path.startsWith(href + '/');
 
 const ICON_TOGGLE = 'M3.75 6A2.25 2.25 0 0 1 6 3.75h12A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V6ZM9 3.75v16.5';
 const ICON_LOGOUT = 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9';
@@ -74,6 +68,31 @@ const ICON_LOGOUT = 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.2
         :root[data-sb='collapsed'] .sb-tip { display: block; }
       }
 
+
+      /* Submenu (accordion). Saat sidebar diciutkan di desktop, submenu jadi flyout saat di-hover */
+      .sb-sub { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.2s ease; }
+      .sb-sub[data-open='true'] { grid-template-rows: 1fr; }
+      .sb-sub-clip { overflow: hidden; min-height: 0; }
+      .sb-chev { transition: transform 0.2s ease; }
+      [data-group-toggle][aria-expanded='true'] .sb-chev { transform: rotate(180deg); }
+      .sb-fly-title { display: none; }
+
+      @media (min-width: 1024px) {
+        :root[data-sb='collapsed'] .sb-chev { display: none; }
+        :root[data-sb='collapsed'] .sb-sub {
+          display: none; position: absolute; left: 100%; top: 0; width: 15.5rem; padding-left: 0.75rem;
+          grid-template-rows: 1fr;
+        }
+        :root[data-sb='collapsed'] .sb-group:hover .sb-sub,
+        :root[data-sb='collapsed'] .sb-group:focus-within .sb-sub { display: grid; }
+        :root[data-sb='collapsed'] .sb-sub-clip { overflow: visible; }
+        :root[data-sb='collapsed'] .sb-sub-list {
+          margin: 0; padding: 0.5rem; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 0.75rem;
+          background: #172554; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+        }
+        :root[data-sb='collapsed'] .sb-fly-title { display: block; }
+      }
+
       .sb-tip { display: none; }
       .sb-item:hover .sb-tip,
       .sb-item:focus-visible .sb-tip { opacity: 1; transform: translateX(0); }
@@ -92,11 +111,11 @@ const ICON_LOGOUT = 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.2
       <!-- Sidebar -->
       <aside
         id="sidebar"
-        class="-translate-x-full fixed inset-y-0 left-0 z-40 w-64 lg:w-[var(--sb-w)] lg:translate-x-0 bg-gradient-to-b from-blue-900 to-[#172554] text-white flex flex-col shadow-xl lg:shadow-none transition-[transform,width] duration-200 ease-out"
+        class="-translate-x-full fixed inset-y-0 left-0 z-40 w-64 lg:w-(--sb-w) lg:translate-x-0 bg-linear-to-b from-blue-900 to-[#172554] text-white flex flex-col shadow-xl lg:shadow-none transition-[transform,width] duration-200 ease-out"
         aria-label="Navigasi utama"
       >
         <!-- Brand -->
-        <a href="/" class="sb-brand group flex items-center gap-3 px-4 h-16 shrink-0 border-b border-white/10">
+        <a href="/dashboard" class="sb-brand group flex items-center gap-3 px-4 h-16 shrink-0 border-b border-white/10">
           <span class="grid place-items-center w-10 h-10 shrink-0 rounded-full bg-white p-1.5 ring-4 ring-white/10 transition group-hover:ring-white/20 group-hover:scale-105">
             <img src="/logo-kampus.png" alt="Logo kampus" class="max-h-full max-w-full object-contain" />
           </span>
@@ -108,7 +127,57 @@ const ICON_LOGOUT = 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.2
         <!-- Menu -->
         <nav class="flex-1 px-3 py-4 space-y-1">
           {menu.map((item) => {
-            const on = aktif(item.href);
+            if (item.children) {
+              const anyActive = item.children.some((c) => aktif(c.href));
+              return (
+                <div class="sb-group relative" data-group>
+                  <button
+                    type="button"
+                    data-group-toggle
+                    aria-expanded={anyActive ? 'true' : 'false'}
+                    class={
+                      'sb-item group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ' +
+                      (anyActive ? 'bg-white/10 text-white' : 'text-blue-100 hover:bg-white/10 hover:text-white')
+                    }
+                  >
+                    {anyActive && <span class="absolute -left-3 top-2 bottom-2 w-1 rounded-r-full bg-orange-500" />}
+                    <svg
+                      class="size-5 shrink-0 text-blue-200 transition-transform group-hover:scale-110 group-hover:text-white"
+                      xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" d={item.icon} />
+                    </svg>
+                    <span class="sb-label flex-1 truncate">{item.label}</span>
+                    <svg class="sb-chev size-4 shrink-0 text-blue-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </button>
+
+                  <div class="sb-sub" data-open={anyActive ? 'true' : 'false'}>
+                    <div class="sb-sub-clip">
+                      <div class="sb-sub-list mt-1 ml-5 space-y-1 border-l border-white/15 pl-3">
+                        <p class="sb-fly-title px-3 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wide text-blue-200">{item.label}</p>
+                        {item.children.map((c) => {
+                          const on = aktif(c.href);
+                          return (
+                            <a
+                              href={c.href}
+                              aria-current={on ? 'page' : undefined}
+                              class={
+                                'sb-child block rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ' +
+                                (on ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10 hover:text-white')
+                              }
+                            >{c.label}</a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            const on = aktif(item.href ?? '');
             return (
               <a
                 href={item.href}
@@ -155,7 +224,7 @@ const ICON_LOGOUT = 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.2
       </aside>
 
       <!-- Konten -->
-      <div class="lg:pl-[var(--sb-w)] transition-[padding] duration-200 ease-out min-h-screen flex flex-col">
+      <div class="lg:pl-(--sb-w) transition-[padding] duration-200 ease-out min-h-screen flex flex-col">
         <header class="sticky top-0 z-20 h-16 bg-white/85 backdrop-blur border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-3">
           <div class="flex items-center gap-3 min-w-0">
             <button
@@ -182,7 +251,7 @@ const ICON_LOGOUT = 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.2
           <div class="flex items-center gap-2 shrink-0">
             <span class="hidden sm:inline text-sm font-medium bg-blue-50 text-blue-900 pl-1 pr-3 py-1 rounded-full">
               <span class="inline-grid place-items-center size-6 mr-1.5 rounded-full bg-blue-900 text-white text-[10px] font-bold">PL</span>
-              Admin (PLP)
+              Admin
             </span>
             <span class="sm:hidden grid place-items-center size-9 rounded-full bg-blue-900 text-white text-xs font-bold" title="Admin (PLP)">PL</span>
           </div>
@@ -275,6 +344,25 @@ const ICON_LOGOUT = 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.2
       toggleBtn.addEventListener('click', toggleSidebar);
       overlay.addEventListener('click', () => setDrawer(false));
       sidebar.querySelectorAll('nav a').forEach((a) => a.addEventListener('click', () => setDrawer(false)));
+
+      // ---------- Submenu ----------
+      function setGroup(group: Element, open: boolean) {
+        group.querySelector('[data-group-toggle]')?.setAttribute('aria-expanded', String(open));
+        group.querySelector('.sb-sub')?.setAttribute('data-open', String(open));
+      }
+      document.querySelectorAll('[data-group]').forEach((group) => {
+        group.querySelector('[data-group-toggle]')?.addEventListener('click', () => {
+          const open = group.querySelector('.sb-sub')?.getAttribute('data-open') === 'true';
+          if (isDesktop() && root.dataset.sb === 'collapsed') {
+            // Sidebar sedang ciut: lebarkan dulu, lalu buka grupnya
+            setCollapsed(false);
+            setGroup(group, true);
+            return;
+          }
+          setGroup(group, !open);
+        });
+      });
+
 
       document.getElementById('btn-logout-open')?.addEventListener('click', () => setModal(true));
       modal.querySelectorAll('[data-close-modal]').forEach((el) => el.addEventListener('click', () => setModal(false)));

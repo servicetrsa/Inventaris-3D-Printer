@@ -1,316 +1,480 @@
 ---
-import AdminLayout from '../layouts/AdminLayout.astro';
-import { supabase } from '../lib/supabase';
+import PublicLayout from '../layouts/PublicLayout.astro';
+import { SURAT, PRODI, MAKS_BARIS } from '../lib/surat-config';
 
-export const prerender = false;
-
-// ---------- Ambil data dari Supabase ----------
-const { data: printers } = await supabase.from('printers').select('*');
-const { data: filaments } = await supabase.from('filaments').select('*');
-const { data: logbooks } = await supabase
-  .from('logbooks')
-  .select('*')
-  .order('tanggal_pakai', { ascending: true });
-
-const printerList = printers ?? [];
-const filamentList = filaments ?? [];
-const logList = logbooks ?? [];
-
-// ---------- Ringkasan angka ----------
-const totalGram = logList.reduce((sum, l) => sum + (l.volume_gram ?? 0), 0);
-const totalJamMesin = printerList.reduce((sum, p) => sum + (p.total_menit_pakai ?? 0), 0) / 60;
-const totalStok = filamentList.reduce((sum, f) => sum + (f.sisa_stok_gram ?? 0), 0);
-
-// ---------- Data grafik: 14 hari terakhir ----------
-const hariIni = new Date();
-const hari: string[] = [];
-for (let i = 13; i >= 0; i--) {
-  const d = new Date(hariIni);
-  d.setDate(d.getDate() - i);
-  hari.push(d.toISOString().slice(0, 10));
-}
-
-const gramPerHari = hari.map((h) =>
-  logList.filter((l) => l.tanggal_pakai === h).reduce((s, l) => s + (l.volume_gram ?? 0), 0)
-);
-const jamPerHari = hari.map(
-  (h) =>
-    Math.round(
-      (logList.filter((l) => l.tanggal_pakai === h).reduce((s, l) => s + (l.durasi_menit ?? 0), 0) / 60) * 10
-    ) / 10
-);
-const labelHari = hari.map((h) => {
-  const [, m, d] = h.split('-');
-  return `${d}/${m}`;
-});
-
-// ---------- Ringkasan 14 hari terakhir (untuk keterangan kartu) ----------
-const logDuaMinggu = logList.filter((l) => hari.includes(l.tanggal_pakai));
-const gramDuaMinggu = gramPerHari.reduce((a, b) => a + b, 0);
-const adaGram = gramPerHari.some((v) => v > 0);
-const adaJam = jamPerHari.some((v) => v > 0);
-
-// ---------- Riwayat terbaru ----------
-const terbaru = [...logList].reverse().slice(0, 5);
-
-const tanggalId = (t: string) => {
-  const [y, m, d] = String(t).split('-');
-  return y && m && d ? `${d}/${m}/${y}` : t;
-};
-const durasiId = (menit: number) => {
-  const j = Math.floor((menit ?? 0) / 60);
-  const m = (menit ?? 0) % 60;
-  if (j === 0) return `${m} mnt`;
-  return m === 0 ? `${j} jam` : `${j} jam ${m} mnt`;
-};
-
-const chartData = {
-  labelHari,
-  gramPerHari,
-  jamPerHari,
-};
-
-// Ikon (Heroicons outline)
-const ICON = {
-  logbook:
-    'm16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10',
-  cube: 'm21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9',
-  stock:
-    'm20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z',
-  clock: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
-};
-
-const kartu = [
-  {
-    label: 'Peminjaman tercatat',
-    nilai: logList.length.toLocaleString('id-ID'),
-    satuan: '',
-    ket: `${logDuaMinggu.length} dalam 14 hari terakhir`,
-    icon: ICON.logbook,
-    chip: 'bg-orange-50 text-orange-600',
-  },
-  {
-    label: 'Filamen terpakai',
-    nilai: totalGram.toLocaleString('id-ID'),
-    satuan: 'g',
-    ket: `${gramDuaMinggu.toLocaleString('id-ID')} g dalam 14 hari terakhir`,
-    icon: ICON.cube,
-    chip: 'bg-blue-50 text-blue-900',
-  },
-  {
-    label: 'Sisa stok filamen',
-    nilai: totalStok.toLocaleString('id-ID'),
-    satuan: 'g',
-    ket: `${filamentList.length} jenis filamen`,
-    icon: ICON.stock,
-    chip: 'bg-emerald-50 text-emerald-700',
-  },
-  {
-    label: 'Jam pakai mesin',
-    nilai: totalJamMesin.toFixed(1),
-    satuan: 'jam',
-    ket: `${printerList.length} unit printer`,
-    icon: ICON.clock,
-    chip: 'bg-slate-100 text-slate-700',
-  },
-];
+const field =
+  'block w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100';
+const label = 'block text-sm font-medium text-slate-700';
+const card = 'rounded-xl border border-slate-200 bg-white p-4 sm:p-6';
+const kolom =
+  'sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem]';
 ---
 
-<AdminLayout title="Dashboard">
+<PublicLayout>
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-blue-900">Surat Peminjaman 3D Printer</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      Isi formulir, lalu unduh suratnya dalam bentuk PDF. Cetak, minta tanda tangan, dan serahkan ke Pranata Laboratorium Pendidikan. Data yang kamu isi tidak disimpan di server.
+    </p>
+  </div>
 
-  <!-- Ringkasan -->
-  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-    {kartu.map((k) => (
-      <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
-        <div class="flex items-center justify-between gap-2">
-          <p class="text-sm text-slate-500">{k.label}</p>
-          <span class={'grid place-items-center w-9 h-9 rounded-lg shrink-0 ' + k.chip}>
-            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d={k.icon} />
-            </svg>
-          </span>
+  <form id="form-surat" class="space-y-5">
+    <!-- 1. Data pemohon -->
+    <section class={card}>
+      <h2 class="font-semibold text-slate-900">1. Data pemohon</h2>
+
+      <div class="mt-4">
+        <span class={label}>Status</span>
+        <div class="mt-1 inline-flex rounded-lg bg-slate-100 p-1" role="radiogroup" aria-label="Status pemohon">
+          <label class="cursor-pointer">
+            <input type="radio" name="status" value="mahasiswa" checked class="peer sr-only" />
+            <span class="inline-flex h-8 items-center rounded-md px-4 text-sm font-medium text-slate-600 transition peer-checked:bg-white peer-checked:text-blue-900 peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500">Mahasiswa</span>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="status" value="pegawai" class="peer sr-only" />
+            <span class="inline-flex h-8 items-center rounded-md px-4 text-sm font-medium text-slate-600 transition peer-checked:bg-white peer-checked:text-blue-900 peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500">Pegawai / Dosen</span>
+          </label>
         </div>
-        <p class="mt-3 text-2xl sm:text-3xl font-bold text-slate-900 tabular-nums">
-          {k.nilai}{k.satuan && <span class="ml-1 text-base font-medium text-slate-400">{k.satuan}</span>}
-        </p>
-        <p class="mt-1 text-xs text-slate-500">{k.ket}</p>
       </div>
-    ))}
-  </section>
 
-  <!-- Grafik -->
-  <section class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-    <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
-      <h2 class="font-semibold text-slate-900">Filamen terpakai per hari</h2>
-      <p class="text-sm text-slate-500">14 hari terakhir, dalam gram</p>
-      <div class="relative mt-4 h-60">
-        <canvas id="grafik-gram"></canvas>
-        {!adaGram && (
-          <p class="absolute inset-0 grid place-items-center text-sm text-slate-400 pointer-events-none">
-            Belum ada pemakaian dalam 14 hari terakhir
-          </p>
-        )}
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <label class="block">
+          <span class={label}>Nama lengkap</span>
+          <input type="text" name="nama" required autocomplete="name" class={field + ' mt-1'} />
+        </label>
+        <label class="block">
+          <span id="lbl-id" class={label}>NIM</span>
+          <input type="text" name="id_no" required class={field + ' mt-1'} />
+        </label>
+
+        <label data-for="mahasiswa">
+          <span class={label}>Program studi</span>
+          <select name="prodi" required class={field + ' mt-1'}>
+            <option value="">Pilih program studi</option>
+            {PRODI.map((p) => <option value={p}>{p}</option>)}
+          </select>
+        </label>
+        <label data-for="mahasiswa">
+          <span class={label}>Jurusan</span>
+          <input type="text" name="jurusan" required value={SURAT.jurusanDefault} class={field + ' mt-1'} />
+          <span class="mt-1 block text-xs text-slate-500">Terisi otomatis, ubah bila jurusanmu berbeda.</span>
+        </label>
+        <label class="sm:col-span-2" data-for="mahasiswa">
+          <span class={label}>Dosen terkait</span>
+          <input type="text" name="dosen" placeholder="Nama dosen pembimbing / pengampu" class={field + ' mt-1'} />
+        </label>
+
+        <label class="hidden sm:col-span-2" data-for="pegawai">
+          <span class={label}>Unit kerja</span>
+          <input type="text" name="unit" required disabled placeholder="Contoh: Laboratorium Otomasi" class={field + ' mt-1'} />
+        </label>
       </div>
+    </section>
+
+    <!-- 2. Keperluan -->
+    <section class={card}>
+      <h2 class="font-semibold text-slate-900">2. Keperluan</h2>
+      <label class="mt-4 block">
+        <span class={label}>Digunakan untuk</span>
+        <input type="text" name="keperluan" required autocomplete="off" placeholder="Contoh: Pengerjaan Tugas Akhir" class={field + ' mt-1'} />
+      </label>
+    </section>
+
+    <!-- 3. Jadwal -->
+    <section class={card}>
+      <h2 class="font-semibold text-slate-900">3. Jadwal pemakaian</h2>
+      <p class="mt-1 text-sm text-slate-500">
+        Isi rencana pemakaian. Baris kosong dan kolom paraf pada surat diisi tangan setelah alat digunakan.
+      </p>
+
+      <div class={'mt-4 mb-1 hidden gap-2 text-xs font-medium text-slate-500 sm:grid ' + kolom}>
+        <span>Tanggal</span><span>Waktu mulai</span><span>Waktu selesai</span><span>Volume (gram)</span><span></span>
+      </div>
+      <div id="rows" class="space-y-3 sm:space-y-2"></div>
+
+      <button
+        type="button"
+        id="btn-add-row"
+        class="mt-3 inline-flex h-9 items-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-blue-900 transition hover:bg-blue-50 disabled:opacity-50"
+      >+ Tambah jadwal</button>
+      <span class="ml-2 text-xs text-slate-400">maksimal {MAKS_BARIS} baris</span>
+    </section>
+
+    <div id="err" role="alert" class="hidden rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"></div>
+    <div id="ok" class="hidden rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+      Surat berhasil dibuat dan diunduh. Cetak, minta tanda tangan, lalu serahkan ke admin laboratorium.
     </div>
 
-    <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
-      <h2 class="font-semibold text-slate-900">Jam pemakaian mesin per hari</h2>
-      <p class="text-sm text-slate-500">14 hari terakhir, dalam jam</p>
-      <div class="relative mt-4 h-60">
-        <canvas id="grafik-jam"></canvas>
-        {!adaJam && (
-          <p class="absolute inset-0 grid place-items-center text-sm text-slate-400 pointer-events-none">
-            Belum ada pemakaian dalam 14 hari terakhir
-          </p>
-        )}
-      </div>
+    <button
+      type="submit"
+      id="btn-submit"
+      class="h-11 w-full rounded-lg bg-blue-900 px-5 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
+    >Buat surat (PDF)</button>
+  </form>
+
+  <!-- Template baris jadwal -->
+  <template id="row-tpl">
+    <div data-row class={'grid grid-cols-2 gap-2 sm:items-center ' + kolom}>
+      <label class="block">
+        <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Tanggal</span>
+        <input type="date" data-f="tanggal" required aria-label="Tanggal" class={field} />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Waktu mulai</span>
+        <input type="time" data-f="mulai" required aria-label="Waktu mulai" class={field} />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Waktu selesai</span>
+        <input type="time" data-f="selesai" required aria-label="Waktu selesai" class={field} />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Volume (gram)</span>
+        <input type="number" data-f="volume" required min="1" step="1" inputmode="numeric" placeholder="gram" aria-label="Volume (gram)" class={field} />
+      </label>
+      <button
+        type="button"
+        data-remove
+        aria-label="Hapus baris"
+        class="col-span-2 h-10 rounded-lg text-sm text-slate-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 sm:col-span-1"
+      >&times;</button>
     </div>
-  </section>
+  </template>
+</PublicLayout>
 
-  <!-- Riwayat terbaru -->
-  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div class="flex items-center justify-between gap-3 px-4 sm:px-5 py-4">
-      <div>
-        <h2 class="font-semibold text-slate-900">Peminjaman terbaru</h2>
-        <p class="text-sm text-slate-500">5 catatan terakhir</p>
-      </div>
-      <a
-        href="/riwayat_pemakaian"
-        class="text-sm font-medium text-blue-900 hover:text-blue-700 hover:underline underline-offset-4 whitespace-nowrap"
-      >Lihat semua</a>
-    </div>
+<script>
+  import { SURAT, MAKS_BARIS } from '../lib/surat-config';
 
-    {terbaru.length === 0
-      ? (
-        <div class="px-5 py-10 text-center border-t border-slate-100">
-          <p class="text-sm text-slate-500">Belum ada peminjaman yang tercatat.</p>
-          <a
-            href="/logbook"
-            class="mt-3 inline-block rounded-lg bg-blue-900 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 transition"
-          >Input logbook</a>
-        </div>
-      )
-      : (
-        <div class="overflow-x-auto border-t border-slate-100">
-          <table class="w-full text-sm text-left">
-            <thead class="bg-slate-50 text-slate-500">
-              <tr>
-                <th class="py-2.5 pl-4 sm:pl-5 pr-4 font-medium whitespace-nowrap">Tanggal</th>
-                <th class="py-2.5 pr-4 font-medium">Mahasiswa</th>
-                <th class="py-2.5 pr-4 font-medium">Keperluan</th>
-                <th class="py-2.5 pr-4 font-medium">Dosen</th>
-                <th class="py-2.5 pr-4 font-medium text-right">Durasi</th>
-                <th class="py-2.5 pr-4 sm:pr-5 font-medium text-right">Filamen</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              {terbaru.map((l) => (
-                <tr class="hover:bg-slate-50 transition-colors">
-                  <td class="py-3 pl-4 sm:pl-5 pr-4 whitespace-nowrap text-slate-700">{tanggalId(l.tanggal_pakai)}</td>
-                  <td class="py-3 pr-4">
-                    <p class="font-medium text-slate-900">{l.nama_mahasiswa}</p>
-                    <p class="text-xs text-slate-500">{l.program_studi}</p>
-                  </td>
-                  <td class="py-3 pr-4 text-slate-700">{l.keperluan}</td>
-                  <td class="py-3 pr-4 text-slate-700">{l.dosen_terkait ?? '-'}</td>
-                  <td class="py-3 pr-4 text-right whitespace-nowrap text-slate-700 tabular-nums">{durasiId(l.durasi_menit)}</td>
-                  <td class="py-3 pr-4 sm:pr-5 text-right whitespace-nowrap font-medium text-slate-900 tabular-nums">{l.volume_gram} g</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-  </section>
+  type Data = {
+    status: string; nama: string; idNo: string; prodi: string; jurusan: string;
+    unit: string; dosen: string; keperluan: string;
+  };
+  type Baris = { tanggal: string; mulai: string; selesai: string; volume: string };
 
-  <!-- Data grafik dari server -->
-  <script type="application/json" id="chart-data" set:html={JSON.stringify(chartData)}></script>
+  const form = document.getElementById('form-surat') as HTMLFormElement;
+  const rowsEl = document.getElementById('rows') as HTMLElement;
+  const tpl = document.getElementById('row-tpl') as HTMLTemplateElement;
+  const btnAdd = document.getElementById('btn-add-row') as HTMLButtonElement;
+  const btnSubmit = document.getElementById('btn-submit') as HTMLButtonElement;
+  const errEl = document.getElementById('err') as HTMLElement;
+  const okEl = document.getElementById('ok') as HTMLElement;
+  const lblId = document.getElementById('lbl-id') as HTMLElement;
 
-  <!-- Chart.js dari CDN -->
-  <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  // ---------- Status pemohon ----------
+  const statusVal = () => (form.querySelector('input[name="status"]:checked') as HTMLInputElement).value;
+  function terapkanStatus() {
+    const s = statusVal();
+    document.querySelectorAll<HTMLElement>('[data-for]').forEach((el) => {
+      const on = el.dataset.for === s;
+      el.classList.toggle('hidden', !on);
+      el.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input,select').forEach((i) => (i.disabled = !on));
+    });
+    lblId.textContent = s === 'mahasiswa' ? 'NIM' : 'NIP / NIK';
+  }
+  form.querySelectorAll('input[name="status"]').forEach((r) => r.addEventListener('change', terapkanStatus));
+  terapkanStatus();
 
-  <!-- Menggambar grafik -->
-  <script is:inline>
-    (function () {
-      var data = JSON.parse(document.getElementById('chart-data').textContent);
-      var biru = '#1e3a8a';
-      var oranye = '#ea580c';
-      var teks = '#64748b';
-      var garis = '#eef2f7';
+  // ---------- Baris jadwal ----------
+  function refreshRows() {
+    const n = rowsEl.children.length;
+    rowsEl.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach((b) => (b.disabled = n <= 1));
+    btnAdd.disabled = n >= MAKS_BARIS;
+  }
+  function addRow() {
+    if (rowsEl.children.length >= MAKS_BARIS) return;
+    rowsEl.appendChild(tpl.content.firstElementChild!.cloneNode(true));
+    refreshRows();
+  }
+  rowsEl.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('[data-remove]');
+    if (b && rowsEl.children.length > 1) {
+      b.closest('[data-row]')!.remove();
+      refreshRows();
+    }
+  });
+  btnAdd.addEventListener('click', addRow);
+  addRow();
 
-      Chart.defaults.font.family = 'ui-sans-serif, system-ui, sans-serif';
-      Chart.defaults.color = teks;
+  // ---------- Ambil & validasi data ----------
+  const isi = (name: string) =>
+    ((form.elements.namedItem(name) as HTMLInputElement | null)?.value ?? '').trim();
 
-      function opsi(satuan, bulat) {
-        return {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#0f172a',
-              padding: 10,
-              cornerRadius: 8,
-              displayColors: false,
-              callbacks: {
-                label: function (ctx) { return ctx.parsed.y + ' ' + satuan; },
-              },
-            },
-          },
-          scales: {
-            x: { grid: { display: false }, border: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 12 } },
-            y: {
-              beginAtZero: true,
-              grid: { color: garis },
-              border: { display: false },
-              ticks: bulat ? { precision: 0 } : {},
-            },
-          },
-        };
+  function ambilData(): Data {
+    return {
+      status: statusVal(), nama: isi('nama'), idNo: isi('id_no'), prodi: isi('prodi'),
+      jurusan: isi('jurusan'), unit: isi('unit'), dosen: isi('dosen'), keperluan: isi('keperluan'),
+    };
+  }
+  function ambilBaris(): Baris[] {
+    return Array.from(rowsEl.querySelectorAll('[data-row]')).map((r) => {
+      const g = (f: string) => (r.querySelector(`[data-f="${f}"]`) as HTMLInputElement).value;
+      return { tanggal: g('tanggal'), mulai: g('mulai'), selesai: g('selesai'), volume: g('volume') };
+    });
+  }
+  function validasi(rows: Baris[]): string[] {
+    const e: string[] = [];
+    rows.forEach((r, i) => {
+      if (r.selesai <= r.mulai) e.push(`Jadwal baris ${i + 1}: waktu selesai harus setelah waktu mulai.`);
+      if (!(Number(r.volume) >= 1)) e.push(`Jadwal baris ${i + 1}: volume minimal 1 gram.`);
+    });
+    return e;
+  }
+
+  // ---------- Format tanggal ----------
+  const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const tglId = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return `${d} ${BULAN[m - 1]} ${y}`;
+  };
+  const hariIniWib = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+
+  // ---------- Logo ----------
+  function muatLogo(): Promise<{ url: string; w: number; h: number } | null> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        c.getContext('2d')!.drawImage(img, 0, 0);
+        resolve({ url: c.toDataURL('image/png'), w: img.naturalWidth, h: img.naturalHeight });
+      };
+      img.onerror = () => resolve(null);
+      img.src = '/logo-kampus.png';
+    });
+  }
+
+  // ---------- Bangun PDF ----------
+  async function buatPdf(d: Data, rows: Baris[]) {
+    const [{ jsPDF }, logo] = await Promise.all([import('jspdf'), muatLogo()]);
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const L = 25, R = 185, W = R - L, LH = 5;
+    const mhs = d.status === 'mahasiswa';
+    const idLabel = mhs ? 'NIM' : 'NIP/NIK';
+
+    const sorted = [...rows].sort((a, b) => (a.tanggal + a.mulai).localeCompare(b.tanggal + b.mulai));
+    const awal = sorted[0].tanggal;
+    const akhir = sorted[sorted.length - 1].tanggal;
+    const tglPinjam = awal === akhir ? tglId(awal) : `${tglId(awal)} s.d. ${tglId(akhir)}`;
+
+    const font = (bold = false, size = 11) => {
+      doc.setFont('times', bold ? 'bold' : 'normal');
+      doc.setFontSize(size);
+    };
+    const teks = (t: string | string[], x: number, yy: number, o?: { align?: 'left' | 'center' | 'right' }) =>
+      doc.text(t, x, yy, o);
+
+    // Kop surat
+    if (logo) {
+      const lw = 22;
+      doc.addImage(logo.url, 'PNG', L - 3, 11, lw, lw * (logo.h / logo.w));
+    }
+    font(true, 16);
+    teks(SURAT.kop.nama, 112, 20, { align: 'center' });
+    font(false, 10.5);
+    teks(SURAT.kop.alamat, 112, 26.5, { align: 'center' });
+    doc.setLineWidth(0.5);
+    doc.line(L - 5, 35, R + 5, 35);
+    doc.setLineWidth(0.2);
+
+    font();
+    teks(`${SURAT.kop.kota}, ${tglId(hariIniWib())}`, R, 43, { align: 'right' });
+
+    let y = 51;
+    const baris = (lbl: string, nilai: string, yy: number, co: number) => {
+      teks(lbl, L, yy);
+      teks(':', L + co, yy);
+      const ls = doc.splitTextToSize(nilai || ' ', W - co - 4) as string[];
+      teks(ls, L + co + 4, yy);
+      return yy + ls.length * LH;
+    };
+
+    y = baris('Lampiran', '1', y, 22);
+    y = baris('Perihal', SURAT.perihal, y, 22);
+    y = baris('Kepada', '', y, 22);
+    const xi = L + 26;
+    teks(`Yth. ${SURAT.penerima.sapaan} ${SURAT.penerima.nama}`, xi, y); y += LH;
+    teks(SURAT.penerima.instansi, xi, y); y += LH;
+    teks('Di Tempat', xi, y); y += LH * 2;
+
+    teks('Dengan Hormat,', L, y); y += LH * 1.6;
+    teks('Saya yang bertanda tangan di bawah ini:', L, y); y += LH * 1.3;
+
+    const ident: [string, string][] = [['Nama', d.nama], [idLabel, d.idNo]];
+    if (mhs) {
+      ident.push(['Program Studi', d.prodi], ['Jurusan', d.jurusan]);
+      if (d.dosen) ident.push(['Dosen Terkait', d.dosen]);
+    } else {
+      ident.push(['Unit Kerja', d.unit]);
+    }
+    ident.push(['Tgl Peminjaman', tglPinjam]);
+    for (const [k, v] of ident) y = baris(k, v, y, 34);
+    y += LH * 0.8;
+
+    // Paragraf 1 (keperluan dicetak tebal) — rata kiri-kanan (justify)
+    const parts = [
+      { t: `Bersama surat ini, saya bermaksud mengajukan permohonan izin untuk meminjam barang milik ${SURAT.penerima.sapaan} berupa 1 (satu) unit mesin 3D Printer. Peminjaman alat tersebut akan saya gunakan untuk keperluan:` },
+      { t: d.keperluan, b: true },
+    ];
+    type Kata = { t: string; b: boolean; w: number };
+    const kata: Kata[] = [];
+    for (const p of parts) {
+      font(!!p.b);
+      for (const t of p.t.split(' ').filter(Boolean)) {
+        kata.push({ t, b: !!p.b, w: doc.getTextWidth(t) });
       }
-
-      function buat(id, config) {
-        var el = document.getElementById(id);
-        if (el) new Chart(el, config);
+    }
+    font();
+    const spN = doc.getTextWidth(' ');
+    const garis: Kata[][] = [[]];
+    let lebar = 0;
+    for (const k of kata) {
+      const cur = garis[garis.length - 1];
+      const tambah = cur.length ? spN + k.w : k.w;
+      if (cur.length && lebar + tambah > W) {
+        garis.push([k]);
+        lebar = k.w;
+      } else {
+        cur.push(k);
+        lebar += tambah;
       }
-
-      buat('grafik-gram', {
-        type: 'bar',
-        data: {
-          labels: data.labelHari,
-          datasets: [{
-            label: 'Gram',
-            data: data.gramPerHari,
-            backgroundColor: biru,
-            hoverBackgroundColor: '#1d4ed8',
-            borderRadius: 4,
-            maxBarThickness: 26,
-          }],
-        },
-        options: opsi('g', true),
+    }
+    garis.forEach((ln, i) => {
+      const terakhir = i === garis.length - 1;
+      const total = ln.reduce((s, k) => s + k.w, 0);
+      const gap = !terakhir && ln.length > 1 ? (W - total) / (ln.length - 1) : spN;
+      let px = L;
+      ln.forEach((k) => {
+        font(k.b);
+        teks(k.t, px, y);
+        px += k.w + gap;
       });
+      if (!terakhir) y += LH;
+    });
+    font();
+    y += LH + 2.5;
 
-      buat('grafik-jam', {
-        type: 'line',
-        data: {
-          labels: data.labelHari,
-          datasets: [{
-            label: 'Jam',
-            data: data.jamPerHari,
-            borderColor: oranye,
-            borderWidth: 2,
-            backgroundColor: 'rgba(234,88,12,0.08)',
-            fill: true,
-            tension: 0.35,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            pointHoverBackgroundColor: oranye,
-          }],
-        },
-        options: opsi('jam', false),
+    // Paragraf biasa — rata kiri-kanan (baris terakhir tetap rata kiri)
+    const para = (t: string) => {
+      const ls = doc.splitTextToSize(t, W) as string[];
+      ls.forEach((ln, i) => {
+        const yl = y + i * LH;
+        const kt = ln.split(' ').filter(Boolean);
+        if (i === ls.length - 1 || kt.length < 2) {
+          teks(ln, L, yl);
+          return;
+        }
+        const total = kt.reduce((s, k) => s + doc.getTextWidth(k), 0);
+        const gap = (W - total) / (kt.length - 1);
+        let px = L;
+        kt.forEach((k) => {
+          teks(k, px, yl);
+          px += doc.getTextWidth(k) + gap;
+        });
       });
-    })();
-  </script>
+      y += ls.length * LH + 2.5;
+    };
+    para('Selama masa peminjaman, saya berkomitmen untuk menjaga, merawat, dan menggunakan alat tersebut sesuai dengan prosedur yang berlaku. Saya juga bersedia bertanggung jawab penuh apabila terjadi kerusakan atau kehilangan atas alat tersebut selama berada dalam tanggung jawab saya.');
+    para(`Demikian surat permohonan peminjaman ini saya sampaikan. Atas perhatian, bantuan, dan izin yang ${SURAT.penerima.sapaan} berikan, saya ucapkan terima kasih.`);
 
-</AdminLayout>
+    // Tanda tangan
+    if (y + 78 > 285) { doc.addPage(); y = 25; }
+    const cl = L + 40, cr = R - 40;
+    const nama = (cxx: number, yy: number, t: string) => {
+      const ls = doc.splitTextToSize(t, 74) as string[];
+      ls.forEach((ln, i) => {
+        const yl = yy + i * LH;
+        teks(ln, cxx, yl, { align: 'center' });
+        const w = doc.getTextWidth(ln);
+        doc.line(cxx - w / 2, yl + 0.9, cxx + w / 2, yl + 0.9);
+      });
+      return ls.length;
+    };
+
+    y += 3;
+    teks('Hormat Saya,', cl, y, { align: 'center' });
+    const yn = y + 20;
+    nama(cl, yn, d.nama);
+    teks(`${idLabel}. ${d.idNo}`, cl, yn + LH + 0.5, { align: 'center' });
+
+    const y2 = yn + LH + 10;
+    teks('Menyetujui,', cl, y2, { align: 'center' });
+    teks('Mengetahui,', cr, y2, { align: 'center' });
+    teks(SURAT.pengetahui.jabatan, cr, y2 + LH, { align: 'center' });
+    const yn2 = y2 + 22;
+    const n1 = nama(cl, yn2, SURAT.penyetuju.nama);
+    const n2 = nama(cr, yn2, SURAT.pengetahui.nama);
+    if (SURAT.penyetuju.nip) teks(`NIP. ${SURAT.penyetuju.nip}`, cl, yn2 + n1 * LH + 0.5, { align: 'center' });
+    if (SURAT.pengetahui.nip) teks(`NIP. ${SURAT.pengetahui.nip}`, cr, yn2 + n2 * LH + 0.5, { align: 'center' });
+
+    // Halaman 2: tabel waktu pemakaian
+    doc.addPage();
+    let ty = 25;
+    font(true, 12);
+    teks('Waktu Pemakaian', L, ty);
+    font(false, 10);
+    ty += 5.5;
+    teks(SURAT.catatanTabel, L, ty);
+    ty += 5;
+
+    const cols = [
+      { h: 'No.', w: 12 }, { h: 'Tanggal', w: 36 }, { h: 'Waktu Mulai', w: 26 },
+      { h: 'Waktu Selesai', w: 26 }, { h: 'Volume (gram)', w: 30 }, { h: 'Paraf Pengguna', w: 30 },
+    ];
+    const RH = 9;
+    const cell = (x: number, yy: number, w: number, t: string) => {
+      doc.rect(x, yy, w, RH);
+      if (t) teks(t, x + w / 2, yy + RH / 2 + 1.3, { align: 'center' });
+    };
+    font(false, 10);
+    let x = L;
+    cols.forEach((c) => { cell(x, ty, c.w, c.h); x += c.w; });
+    ty += RH;
+    for (let i = 0; i < MAKS_BARIS; i++) {
+      const r = sorted[i];
+      const vals = r
+        ? [String(i + 1), tglId(r.tanggal), r.mulai, r.selesai, `${r.volume} gram`, '']
+        : ['', '', '', '', '', ''];
+      x = L;
+      cols.forEach((c, k) => { cell(x, ty, c.w, vals[k]); x += c.w; });
+      ty += RH;
+    }
+
+    const slug = d.nama.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '') || 'Pemohon';
+    doc.save(`Surat-Peminjaman-3D-Printer-${slug}.pdf`);
+  }
+
+  // ---------- Submit ----------
+  function tampilError(list: string[]) {
+    errEl.innerHTML = list.map((t) => `<p>${t}</p>`).join('');
+    errEl.classList.remove('hidden');
+  }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errEl.classList.add('hidden');
+    okEl.classList.add('hidden');
+
+    const rows = ambilBaris();
+    const errors = validasi(rows);
+    if (errors.length) { tampilError(errors); return; }
+
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Membuat PDF...';
+    try {
+      await buatPdf(ambilData(), rows);
+
+      // Kosongkan form setelah surat berhasil dibuat
+      rowsEl.innerHTML = '';
+      addRow();
+      form.reset();
+      terapkanStatus();
+
+      okEl.classList.remove('hidden');
+    } catch (err) {
+      console.error(err);
+      tampilError(['Gagal membuat PDF. Muat ulang halaman lalu coba lagi.']);
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = 'Buat surat (PDF)';
+    }
+  });
+</script>

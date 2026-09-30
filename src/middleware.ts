@@ -4,6 +4,9 @@ import { createSupabaseServer } from './lib/supabase-auth';
 // Jalur yang boleh dibuka tanpa login
 const JALUR_PUBLIK = ['/login'];
 
+// Formulir surat peminjaman: terbuka untuk umum, tidak butuh sesi sama sekali
+const FORM_SURAT = '/';
+
 // File statis (logo, css, dll.) tidak perlu dicek
 const FILE_STATIS = /\.(png|jpe?g|gif|svg|webp|ico|css|js|map|woff2?|txt)$/i;
 
@@ -12,6 +15,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const path = url.pathname;
 
   if (path.startsWith('/_astro') || FILE_STATIS.test(path)) {
+    return next();
+  }
+
+  if (path === FORM_SURAT) {
     return next();
   }
 
@@ -35,7 +42,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Sudah login tapi membuka /login → langsung ke dashboard
   if (user && path === '/login') {
-    return redirect('/');
+    return redirect('/dashboard');
   }
 
   return next();

@@ -5,6 +5,11 @@ export const prerender = false;
 
 const inputClass =
   'mt-1 block w-full rounded-md border border-slate-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-700';
+const rowInput =
+  'block w-full rounded-md border border-slate-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-700';
+const kolom =
+  'md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem]';
+const MAKS_JADWAL = 11;
 ---
 
 <AdminLayout title="Input Logbook">
@@ -18,39 +23,25 @@ const inputClass =
     <form id="form-logbook" class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label class="block text-sm font-medium text-slate-700" for="nama_mahasiswa">Nama mahasiswa</label>
-        <input id="nama_mahasiswa" type="text" name="nama_mahasiswa" required class={inputClass} placeholder="Trixie Glorianna" />
+        <input id="nama_mahasiswa" type="text" name="nama_mahasiswa" required class={inputClass} placeholder="Ahmad" />
       </div>
 
       <div>
         <label class="block text-sm font-medium text-slate-700" for="nim">NIM</label>
-        <input id="nim" type="text" name="nim" required class={inputClass} placeholder="2224402402" />
+        <input id="nim" type="text" name="nim" required class={inputClass} placeholder="223443038" />
       </div>
 
       <div>
-  <label class="block text-sm font-medium text-slate-700" for="program_studi">
-    Program studi
-  </label>
-
-  <select
-    id="program_studi"
-    name="program_studi"
-    required
-    class={inputClass}
-  >
-    <option value="" disabled selected>Pilih program studi</option>
-    <option value="Teknologi Rekayasa Mekatronika">Teknologi Rekayasa Mekatronika</option>
-    <option value="Teknologi Rekayasa Otomasi">Teknologi Rekayasa Otomasi</option>
-    <option value="Teknologi Rekayasa Informatika Industri">
-      Teknologi Rekayasa Informatika Industri
-    </option>
-    <option value="Teknologi Rekayasa Sistem Aerial Nirawak">
-      Teknologi Rekayasa Sistem Aerial Nirawak
-    </option>
-    <option value="Sistem Siber-Fisik (Cyber Physical System)">
-      Sistem Siber-Fisik (Cyber Physical System)
-    </option>
-  </select>
-</div>
+        <label class="block text-sm font-medium text-slate-700" for="program_studi">Program studi</label>
+        <select id="program_studi" name="program_studi" required class={inputClass}>
+          <option value="" disabled selected>Pilih program studi</option>
+          <option value="Teknologi Rekayasa Mekatronika">Teknologi Rekayasa Mekatronika</option>
+          <option value="Teknologi Rekayasa Otomasi">Teknologi Rekayasa Otomasi</option>
+          <option value="Teknologi Rekayasa Informatika Industri">Teknologi Rekayasa Informatika Industri</option>
+          <option value="Teknologi Rekayasa Sistem Aerial Nirawak">Teknologi Rekayasa Sistem Aerial Nirawak</option>
+          <option value="Sistem Siber-Fisik (Cyber Physical System)">Sistem Siber-Fisik (Cyber Physical System)</option>
+        </select>
+      </div>
 
       <div>
         <label class="block text-sm font-medium text-slate-700" for="dosen_terkait">Dosen terkait</label>
@@ -59,27 +50,28 @@ const inputClass =
 
       <div class="md:col-span-2">
         <label class="block text-sm font-medium text-slate-700" for="keperluan">Keperluan</label>
-        <input id="keperluan" type="text" name="keperluan" required class={inputClass} placeholder="Pengerjaan Tugas Akhir" />
+        <input id="keperluan" type="text" name="keperluan" required class={inputClass} placeholder="Pengerjaan PBL" />
       </div>
 
-      <div>
-        <label class="block text-sm font-medium text-slate-700" for="tanggal_pakai">Tanggal pakai</label>
-        <input id="tanggal_pakai" type="date" name="tanggal_pakai" required class={inputClass} />
-      </div>
+      <!-- Jadwal pemakaian (bisa lebih dari satu) -->
+      <div class="md:col-span-2 mt-2 pt-4 border-t border-slate-200">
+        <h3 class="text-sm font-medium text-slate-700">Jadwal pemakaian</h3>
+        <p class="text-sm text-slate-500 mt-1 mb-3">
+          Bila mahasiswa yang sama memakai mesin lebih dari sekali, tambahkan jadwalnya di sini. Data diri di atas cukup diisi sekali.
+        </p>
 
-      <div>
-        <label class="block text-sm font-medium text-slate-700" for="volume_gram">Filamen terpakai (gram)</label>
-        <input id="volume_gram" type="number" name="volume_gram" min="1" required class={inputClass} placeholder="15" />
-      </div>
+        <div class={'mb-1 hidden gap-2 text-sm font-medium text-slate-700 md:grid ' + kolom}>
+          <span>Tanggal pakai</span><span>Jam mulai</span><span>Jam selesai</span><span>Filamen (gram)</span><span></span>
+        </div>
 
-      <div>
-        <label class="block text-sm font-medium text-slate-700" for="waktu_mulai">Jam mulai</label>
-        <input id="waktu_mulai" type="time" name="waktu_mulai" required class={inputClass} />
-      </div>
+        <div id="jadwal-rows" class="space-y-3 md:space-y-2"></div>
 
-      <div>
-        <label class="block text-sm font-medium text-slate-700" for="waktu_selesai">Jam selesai</label>
-        <input id="waktu_selesai" type="time" name="waktu_selesai" required class={inputClass} />
+        <button
+          type="button"
+          id="btn-tambah-jadwal"
+          class="mt-3 inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-blue-900 transition hover:bg-blue-50 disabled:opacity-50"
+        >+ Tambah jadwal</button>
+        <span class="ml-2 text-sm text-slate-500">maksimal {MAKS_JADWAL} jadwal</span>
       </div>
 
       <div class="md:col-span-2 flex justify-end gap-3 mt-2">
@@ -93,44 +85,118 @@ const inputClass =
     </form>
   </section>
 
-  <script>
-    const form = document.getElementById('form-logbook') as HTMLFormElement | null;
-    const tombol = document.getElementById('tombol-simpan') as HTMLButtonElement | null;
-    const inputTanggal = document.getElementById('tanggal_pakai') as HTMLInputElement | null;
+  <!-- Template baris jadwal -->
+  <template id="jadwal-tpl">
+    <div data-row class={'grid grid-cols-2 gap-2 md:items-center ' + kolom}>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-700 md:hidden">Tanggal pakai</span>
+        <input type="date" name="tanggal_pakai" required aria-label="Tanggal pakai" class={rowInput} />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-700 md:hidden">Jam mulai</span>
+        <input type="time" name="waktu_mulai" required aria-label="Jam mulai" class={rowInput} />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-700 md:hidden">Jam selesai</span>
+        <input type="time" name="waktu_selesai" required aria-label="Jam selesai" class={rowInput} />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-700 md:hidden">Filamen (gram)</span>
+        <input type="number" name="volume_gram" min="1" step="1" required placeholder="15" aria-label="Filamen terpakai (gram)" class={rowInput} />
+      </label>
+      <button
+        type="button"
+        data-remove
+        aria-label="Hapus jadwal"
+        class="col-span-2 h-10 rounded-md text-sm text-slate-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 md:col-span-1"
+      >&times;</button>
+    </div>
+  </template>
 
-    function isiTanggalHariIni() {
-  if (inputTanggal) inputTanggal.value = new Date().toLocaleDateString('en-CA');
-}
-    isiTanggalHariIni();
+  <script define:vars={{ MAKS_JADWAL }}>
+    const form = document.getElementById('form-logbook');
+    const tombol = document.getElementById('tombol-simpan');
+    const rowsEl = document.getElementById('jadwal-rows');
+    const tpl = document.getElementById('jadwal-tpl');
+    const btnTambah = document.getElementById('btn-tambah-jadwal');
 
-    if (form && tombol) {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        tombol.disabled = true;
-        tombol.textContent = 'Menyimpan...';
+    const hariIni = () => new Date().toLocaleDateString('en-CA');
 
-        try {
-          const response = await fetch('/api/simpan-log', {
-            method: 'POST',
-            body: new FormData(form),
-          });
-          const result = await response.json();
-
-          if (response.ok) {
-            alert('Data logbook berhasil disimpan!');
-            form.reset();
-            isiTanggalHariIni();
-          } else {
-            alert('Gagal menyimpan: ' + (result.error || 'Terjadi kesalahan'));
-          }
-        } catch (err) {
-          alert('Terjadi kesalahan jaringan.');
-        } finally {
-          tombol.disabled = false;
-          tombol.textContent = 'Simpan ke logbook';
-        }
-      });
+    function refreshRows() {
+      const n = rowsEl.children.length;
+      rowsEl.querySelectorAll('[data-remove]').forEach((b) => (b.disabled = n <= 1));
+      btnTambah.disabled = n >= MAKS_JADWAL;
     }
+
+    function tambahBaris() {
+      if (rowsEl.children.length >= MAKS_JADWAL) return;
+      const baris = tpl.content.firstElementChild.cloneNode(true);
+      baris.querySelector('[name="tanggal_pakai"]').value = hariIni();
+      rowsEl.appendChild(baris);
+      refreshRows();
+    }
+
+    function resetBaris() {
+      rowsEl.innerHTML = '';
+      tambahBaris();
+    }
+
+    rowsEl.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-remove]');
+      if (b && rowsEl.children.length > 1) {
+        b.closest('[data-row]').remove();
+        refreshRows();
+      }
+    });
+    btnTambah.addEventListener('click', tambahBaris);
+    resetBaris();
+
+    function cekJadwal() {
+      const baris = Array.from(rowsEl.querySelectorAll('[data-row]'));
+      for (let i = 0; i < baris.length; i++) {
+        const mulai = baris[i].querySelector('[name="waktu_mulai"]').value;
+        const selesai = baris[i].querySelector('[name="waktu_selesai"]').value;
+        if (selesai <= mulai) return `Jadwal ${i + 1}: jam selesai harus setelah jam mulai.`;
+      }
+      return null;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const salah = cekJadwal();
+      if (salah) {
+        alert(salah);
+        return;
+      }
+
+      const jumlah = rowsEl.children.length;
+      tombol.disabled = true;
+      tombol.textContent = 'Menyimpan...';
+
+      try {
+        const response = await fetch('/api/simpan-log', {
+          method: 'POST',
+          body: new FormData(form),
+        });
+        const result = await response.json();
+
+        if (response.ok) {
+          alert(jumlah > 1
+            ? `Data logbook berhasil disimpan (${jumlah} jadwal)!`
+            : 'Data logbook berhasil disimpan!');
+          form.reset();
+          resetBaris();
+        } else {
+          alert('Gagal menyimpan: ' + (result.error || 'Terjadi kesalahan'));
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan jaringan.');
+      } finally {
+        tombol.disabled = false;
+        tombol.textContent = 'Simpan ke logbook';
+      }
+    });
   </script>
 
 </AdminLayout>
