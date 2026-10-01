@@ -119,22 +119,22 @@ const kolom =
     <div data-row class={'grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:items-center sm:gap-2 sm:border-0 sm:bg-transparent sm:p-0 ' + kolom}>
       <p data-no class="col-span-2 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:hidden"></p>
 
-      <label class="col-span-2 block sm:col-span-1">
+      <label class="col-span-2 block min-w-0 sm:col-span-1">
         <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Tanggal</span>
         <input type="date" data-f="tanggal" required aria-label="Tanggal" class={field} />
       </label>
 
-      <label class="block">
+      <label class="block min-w-0">
         <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Waktu mulai</span>
         <input type="time" data-f="mulai" required aria-label="Waktu mulai" class={field} />
       </label>
 
-      <label class="block">
+      <label class="block min-w-0">
         <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Waktu selesai</span>
         <input type="time" data-f="selesai" required aria-label="Waktu selesai" class={field} />
       </label>
 
-      <label class="col-span-2 block sm:col-span-1">
+      <label class="col-span-2 block min-w-0 sm:col-span-1">
         <span class="mb-1 block text-xs font-medium text-slate-500 sm:hidden">Volume (gram)</span>
         <input type="number" data-f="volume" required min="1" step="1" inputmode="numeric" placeholder="gram" aria-label="Volume (gram)" class={field} />
       </label>
@@ -148,6 +148,24 @@ const kolom =
     </div>
   </template>
 </PublicLayout>
+
+<!-- Perbaikan iOS Safari: input date/time tidak mau menyusut mengikuti kolom grid -->
+<style is:global>
+  input[type="date"],
+  input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    text-align: left;
+  }
+  input[type="date"]::-webkit-date-and-time-value,
+  input[type="time"]::-webkit-date-and-time-value {
+    text-align: left;
+    min-height: 1.5em;
+  }
+</style>
 
 <script>
   import { SURAT, MAKS_BARIS } from '../lib/surat-config';
