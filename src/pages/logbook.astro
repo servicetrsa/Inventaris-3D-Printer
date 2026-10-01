@@ -23,12 +23,12 @@ const MAKS_JADWAL = 11;
     <form id="form-logbook" class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label class="block text-sm font-medium text-slate-700" for="nama_mahasiswa">Nama mahasiswa</label>
-        <input id="nama_mahasiswa" type="text" name="nama_mahasiswa" required class={inputClass} placeholder="Ahmad" />
+        <input id="nama_mahasiswa" type="text" name="nama_mahasiswa" required class={inputClass} />
       </div>
 
       <div>
         <label class="block text-sm font-medium text-slate-700" for="nim">NIM</label>
-        <input id="nim" type="text" name="nim" required class={inputClass} placeholder="223443038" />
+        <input id="nim" type="text" name="nim" required class={inputClass} />
       </div>
 
       <div>
@@ -45,12 +45,12 @@ const MAKS_JADWAL = 11;
 
       <div>
         <label class="block text-sm font-medium text-slate-700" for="dosen_terkait">Dosen terkait</label>
-        <input id="dosen_terkait" type="text" name="dosen_terkait" required class={inputClass} placeholder="Nama dosen pembimbing" />
+        <input id="dosen_terkait" type="text" name="dosen_terkait" required class={inputClass} />
       </div>
 
       <div class="md:col-span-2">
         <label class="block text-sm font-medium text-slate-700" for="keperluan">Keperluan</label>
-        <input id="keperluan" type="text" name="keperluan" required class={inputClass} placeholder="Pengerjaan PBL" />
+        <input id="keperluan" type="text" name="keperluan" required class={inputClass} />
       </div>
 
       <!-- Jadwal pemakaian (bisa lebih dari satu) -->
@@ -102,7 +102,7 @@ const MAKS_JADWAL = 11;
       </label>
       <label class="block">
         <span class="mb-1 block text-sm font-medium text-slate-700 md:hidden">Filamen (gram)</span>
-        <input type="number" name="volume_gram" min="1" step="1" required placeholder="15" aria-label="Filamen terpakai (gram)" class={rowInput} />
+        <input type="number" name="volume_gram" min="1" step="1" required aria-label="Filamen terpakai (gram)" class={rowInput} />
       </label>
       <button
         type="button"
