@@ -2,4 +2,8 @@
 
 @theme {
   --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --color-blue-900: #14286b;
+  --color-blue-800: #1c3585;
+  --color-blue-950: #0c1a4d;
 }
+
