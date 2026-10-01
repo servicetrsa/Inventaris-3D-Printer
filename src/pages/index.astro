@@ -386,10 +386,10 @@ const kolom =
     para(`Demikian surat permohonan peminjaman ini saya sampaikan. Atas perhatian, bantuan, dan izin yang ${SURAT.penerima.sapaan} berikan, saya ucapkan terima kasih.`);
 
     // Tanda tangan
-    if (y + 78 > 285) { doc.addPage(); y = 25; }
-    const cl = L + 40, cr = R - 40;
-    const nama = (cxx: number, yy: number, t: string) => {
-      const ls = doc.splitTextToSize(t, 74) as string[];
+    if (y + 80 > 285) { doc.addPage(); y = 25; }
+    font();
+    const nama = (cxx: number, yy: number, t: string, maxW = 76) => {
+      const ls = doc.splitTextToSize(t, maxW) as string[];
       ls.forEach((ln, i) => {
         const yl = yy + i * LH;
         teks(ln, cxx, yl, { align: 'center' });
@@ -399,21 +399,29 @@ const kolom =
       return ls.length;
     };
 
+    // Kolom kiri melebar mengikuti panjang nama penyetuju supaya tetap satu baris
+    const wPenyetuju = doc.getTextWidth(SURAT.penyetuju.nama);
+    const wPengetahui = doc.getTextWidth(SURAT.pengetahui.nama);
+    const cl = L + Math.max(40, wPenyetuju / 2);
+    const cr = Math.max(R - 36, cl + wPenyetuju / 2 + 8 + wPengetahui / 2);
+    const GAP_NIP = LH + 1.5; // jarak nama (bergaris bawah) ke baris NIM/NIP
+
     y += 3;
     teks('Hormat Saya,', cl, y, { align: 'center' });
-    const yn = y + 20;
+    const yn = y + 22;
     nama(cl, yn, d.nama);
-    teks(`${idLabel}. ${d.idNo}`, cl, yn + LH + 0.5, { align: 'center' });
+    teks(`${idLabel}. ${d.idNo}`, cl, yn + GAP_NIP, { align: 'center' });
 
-    const y2 = yn + LH + 10;
+    const y2 = yn + LH + 16; // jarak ke blok "Menyetujui" / "Mengetahui"
     teks('Menyetujui,', cl, y2, { align: 'center' });
     teks('Mengetahui,', cr, y2, { align: 'center' });
     teks(SURAT.pengetahui.jabatan, cr, y2 + LH, { align: 'center' });
+
     const yn2 = y2 + 22;
-    const n1 = nama(cl, yn2, SURAT.penyetuju.nama);
-    const n2 = nama(cr, yn2, SURAT.pengetahui.nama);
-    if (SURAT.penyetuju.nip) teks(`NIP. ${SURAT.penyetuju.nip}`, cl, yn2 + n1 * LH + 0.5, { align: 'center' });
-    if (SURAT.pengetahui.nip) teks(`NIP. ${SURAT.pengetahui.nip}`, cr, yn2 + n2 * LH + 0.5, { align: 'center' });
+    nama(cl, yn2, SURAT.penyetuju.nama, 120);
+    nama(cr, yn2, SURAT.pengetahui.nama, 120);
+    teks(`NIP. ${SURAT.penyetuju.nip}`.trimEnd(), cl, yn2 + GAP_NIP, { align: 'center' });
+    teks(`NIP. ${SURAT.pengetahui.nip}`.trimEnd(), cr, yn2 + GAP_NIP, { align: 'center' });
 
     // Halaman 2: tabel waktu pemakaian
     doc.addPage();
