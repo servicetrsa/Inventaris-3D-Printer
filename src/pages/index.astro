@@ -46,6 +46,10 @@ const kolom =
           <span id="lbl-id" class={label}>NIM</span>
           <input type="text" name="id_no" required class={field + ' mt-1'} />
         </label>
+        <label class="block">
+          <span class={label}>Nomor telepon / WhatsApp</span>
+          <input type="tel" name="telepon" required inputmode="tel" autocomplete="tel" pattern="[0-9+\-\s]{8,16}" class={field + ' mt-1'} />
+        </label>
 
         <label data-for="mahasiswa">
           <span class={label}>Program studi</span>
@@ -185,7 +189,7 @@ const kolom =
 
   type Data = {
     status: string; nama: string; idNo: string; prodi: string; jurusan: string;
-    unit: string; dosen: string; keperluan: string;
+    unit: string; dosen: string; keperluan: string; telepon: string;
   };
   type Baris = { tanggal: string; mulai: string; selesai: string; volume: string };
 
@@ -242,6 +246,7 @@ const kolom =
     return {
       status: statusVal(), nama: isi('nama'), idNo: isi('id_no'), prodi: isi('prodi'),
       jurusan: isi('jurusan'), unit: isi('unit'), dosen: isi('dosen'), keperluan: isi('keperluan'),
+      telepon: isi('telepon'),
     };
   }
   function ambilBaris(): Baris[] {
@@ -339,7 +344,7 @@ const kolom =
     teks('Dengan Hormat,', L, y); y += LH * 1.6;
     teks('Saya yang bertanda tangan di bawah ini:', L, y); y += LH * 1.3;
 
-    const ident: [string, string][] = [['Nama', d.nama], [idLabel, d.idNo]];
+    const ident: [string, string][] = [['Nama', d.nama], [idLabel, d.idNo], ['No. Telepon', d.telepon]];
     if (mhs) {
       ident.push(['Program Studi', d.prodi], ['Jurusan', d.jurusan]);
       if (d.dosen) ident.push(['Dosen Terkait', d.dosen]);

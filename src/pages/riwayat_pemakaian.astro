@@ -29,7 +29,7 @@ const adaFilter = Boolean(nim || dari || sampai);
 let query = supabase
   .from('logbooks')
   .select(
-    'id, nama_mahasiswa, nim, program_studi, dosen_terkait, keperluan, tanggal_pakai, waktu_mulai, waktu_selesai, durasi_menit, volume_gram, printers(nama_mesin), filaments(jenis_warna)'
+    'id, nama_mahasiswa, nim, no_telepon, program_studi, dosen_terkait, keperluan, tanggal_pakai, waktu_mulai, waktu_selesai, durasi_menit, volume_gram, printers(nama_mesin), filaments(jenis_warna)'
   )
   .order('tanggal_pakai', { ascending: false })
   .order('waktu_mulai', { ascending: false })
@@ -89,6 +89,7 @@ const laporan = {
     formatTanggal(r.tanggal_pakai),
     r.nama_mahasiswa ?? '-',
     r.nim ?? '-',
+    r.no_telepon ?? '-',
     r.program_studi ?? '-',
     r.keperluan ?? '-',
     r.dosen_terkait ?? '-',
@@ -201,6 +202,7 @@ const inputClass =
                 <td class="px-4 py-3">
                   <div class="font-medium text-slate-900">{r.nama_mahasiswa}</div>
                   <div class="text-xs text-slate-500">{r.nim}</div>
+                  {r.no_telepon && <div class="text-xs text-slate-500">{r.no_telepon}</div>}
                 </td>
                 <td class="px-4 py-3">{r.program_studi ?? '-'}</td>
                 <td class="px-4 py-3">{r.keperluan ?? '-'}</td>
@@ -318,7 +320,7 @@ const inputClass =
     // ---------- TABEL ----------
     autoTable(doc, {
       startY: yRingkasan + 4,
-      head: [['No', 'Tanggal', 'Mahasiswa', 'NIM', 'Program Studi', 'Keperluan', 'Dosen', 'Waktu', 'Durasi', 'Filamen']],
+      head: [['No', 'Tanggal', 'Mahasiswa', 'NIM', 'No. Telepon', 'Program Studi', 'Keperluan', 'Dosen', 'Waktu', 'Durasi', 'Filamen']],
       body: laporan.rows.map((r: string[], i: number) => [i + 1, ...r]),
       theme: 'grid',
       styles: { fontSize: 8, cellPadding: 1.8, lineColor: [203, 213, 225], lineWidth: 0.1, valign: 'middle' },
@@ -328,9 +330,10 @@ const inputClass =
         0: { halign: 'center', cellWidth: 10 },
         1: { cellWidth: 22 },
         3: { cellWidth: 26 },
-        7: { cellWidth: 26 },
-        8: { cellWidth: 20 },
-        9: { cellWidth: 28, halign: 'right' },
+        4: { cellWidth: 26 },
+        8: { cellWidth: 26 },
+        9: { cellWidth: 20 },
+        10: { cellWidth: 28, halign: 'right' },
       },
       margin: { left: M, right: M, bottom: 16 },
     });

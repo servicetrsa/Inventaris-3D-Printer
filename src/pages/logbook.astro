@@ -32,6 +32,11 @@ const MAKS_JADWAL = 11;
       </div>
 
       <div>
+        <label class="block text-sm font-medium text-slate-700" for="no_telepon">Nomor telepon / WhatsApp</label>
+        <input id="no_telepon" type="tel" name="no_telepon" inputmode="tel" pattern="[0-9+\-\s]{8,16}" class={inputClass} />
+      </div>
+
+      <div>
         <label class="block text-sm font-medium text-slate-700" for="program_studi">Program studi</label>
         <select id="program_studi" name="program_studi" required class={inputClass}>
           <option value="" disabled selected>Pilih program studi</option>

@@ -12,8 +12,8 @@ export const SURAT = {
     instansi: 'Politeknik Manufaktur Bandung',
   },
   // Kosongkan "nip" bila tidak ingin dicetak di bawah nama
-  penyetuju: { nama: 'Dr. Eng. Pipit Anggraeni, S.T., M.T., M.Sc.Eng.', nip: '' },
-  pengetahui: { jabatan: 'Sekretaris Jurusan', nama: 'Nur Wisma Nugraha, S.T., M.T.', nip: '' },
+  penyetuju: { nama: 'Dr. Eng. Pipit Anggraeni, S.T., M.T., M.Sc.Eng.', nip: '197908242005012001' },
+  pengetahui: { jabatan: 'Sekretaris Jurusan', nama: 'Nur Wisma Nugraha, S.T., M.T.', nip: '197406092003121000' },
   jurusanDefault: 'Teknik Otomasi Manufaktur dan Mekatronika',
   catatanTabel: '* (tabel kosong diprint di balik surat di atas, isi ditulis tangan)',
 };

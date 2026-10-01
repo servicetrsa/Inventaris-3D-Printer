@@ -15,6 +15,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const nama_mahasiswa = formData.get('nama_mahasiswa')?.toString();
     const nim = formData.get('nim')?.toString();
+    const no_telepon = formData.get('no_telepon')?.toString().trim() || null;
     const program_studi = formData.get('program_studi')?.toString();
     const dosen_terkait = formData.get('dosen_terkait')?.toString();
     const keperluan = formData.get('keperluan')?.toString();
@@ -93,6 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
         filament_id: filamentData.id,
         nama_mahasiswa,
         nim,
+        no_telepon,
         program_studi,
         dosen_terkait,
         keperluan,
